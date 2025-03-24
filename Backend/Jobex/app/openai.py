@@ -40,7 +40,7 @@ def extract_components_openai(resume_text):
 10. Volunteering: Include organization names, roles, dates, and key contributions
 11. Publications: Include titles, publication venues, dates, and co-authors if applicable
 
-Return the information in valid JSON format.
+Return the information in valid JSON format and if any section is missing so please do not include that empty section in the json.
 
 Resume text: {resume_text}
 
@@ -88,3 +88,52 @@ Important: Return ONLY valid JSON without any additional text, explanations, or 
     except Exception as e:
         # Include more context in the error message
         return {"error": f"An error occurred during resume analysis: {str(e)}", "trace": str(type(e))}
+    
+
+def compare_desc_resume(job_data, resume_json):
+    """
+    Compare job description with resume data and provide a brief analysis.
+    
+    Args:
+        job_data (dict): Job data including title, company, and description
+        resume_json (dict): Structured resume data extracted from PDF
+        
+    Returns:
+        dict: Analysis results including match score and brief summary
+    """
+    try:
+        
+        # Create a prompt for comparison
+        prompt = f"""
+Compare the following job description with the candidate's resume information and provide a brief analysis (maximum 50 words):
+job description : {job_data}, 
+resume information : {resume_json},
+Provide a brief assessment of the match between the candidate and the job in exactly 50 words.
+"""
+        
+        # Call OpenAI API for comparison
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a job matching specialist. Provide concise, honest assessments of how well a candidate matches a job description."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=100  # Limiting to ensure we get a concise response
+        )
+        
+        # Extract the response
+        analysis = response.choices[0].message.content.strip()
+        
+        
+        return {
+            "analysis": analysis,
+        }
+        
+    except Exception as e:
+        return {
+            "error": f"Failed to compare resume with job description: {str(e)}",
+            "match_score": 0,
+            "analysis": "Unable to analyze the match due to an error."
+        }
+    

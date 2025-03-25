@@ -72,7 +72,6 @@ def gen_model(prompt):
         ],
         temperature=0.1,  # Lower temperature for more consistent output
         max_tokens=4000   # Increased token limit for comprehensive analysis
-        # Removed response_format parameter since it's not supported
     )
     
     # Extract the assistant's response
@@ -91,7 +90,26 @@ def gen_model(prompt):
         
     result = result.strip()
     
-    return result
+    # Parse the string to a Python dictionary
+    try:
+        return json.loads(result)
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON: {e}")
+        print(f"Raw response: {result}")
+        # Return a default structure to prevent errors
+        return {
+            "score": {
+                "matchPercentage": 0,
+                "pointsAwarded": 0,
+                "rating": "Error",
+                "ratingSymbol": "❌"
+            },
+            "analysis": {
+                "matchedKeywords": [],
+                "missingKeywords": [],
+                "suggestedImprovements": "Failed to parse analysis."
+            }
+        }
 
 
 def keyword_match(resume_text, job_description):
@@ -521,26 +539,100 @@ def bullet_point_effectiveness(resume_text):
     return response
 
 def detail_resume_analysis(resume_text, job_description):
-    # Perform the analysis and store the results in JSON format
-    keyword_match_json = keyword_match(resume_text, job_description)
-    job_experience_json = job_experience(resume_text, job_description)
-    skills_certifications_json = skills_certifications(resume_text, job_description)
-    resume_structure_json = resume_structure(resume_text)
-    action_words_json = action_words(resume_text, job_description)
-    measurable_results_json = measurable_results(resume_text, job_description)
-    bullet_point_effectiveness_json = bullet_point_effectiveness(resume_text)
+    # Perform the analysis and store the results
+    try:
+        keyword_match_json = keyword_match(resume_text, job_description)
+        job_experience_json = job_experience(resume_text, job_description)
+        skills_certifications_json = skills_certifications(resume_text, job_description)
+        resume_structure_json = resume_structure(resume_text)
+        action_words_json = action_words(resume_text, job_description)
+        measurable_results_json = measurable_results(resume_text, job_description)
+        bullet_point_effectiveness_json = bullet_point_effectiveness(resume_text)
+        
+        # Ensure all responses are properly parsed JSON objects
+        if not isinstance(keyword_match_json, dict):
+            print("Warning: keyword_match_json is not a dictionary")
+            keyword_match_json = json.loads(keyword_match_json) if isinstance(keyword_match_json, str) else {"score": {"pointsAwarded": 0}}
+        
+        if not isinstance(job_experience_json, dict):
+            print("Warning: job_experience_json is not a dictionary")
+            job_experience_json = json.loads(job_experience_json) if isinstance(job_experience_json, str) else {"score": {"pointsAwarded": 0}}
+        
+        if not isinstance(skills_certifications_json, dict):
+            print("Warning: skills_certifications_json is not a dictionary")
+            skills_certifications_json = json.loads(skills_certifications_json) if isinstance(skills_certifications_json, str) else {"score": {"pointsAwarded": 0}}
+        
+        if not isinstance(resume_structure_json, dict):
+            print("Warning: resume_structure_json is not a dictionary")
+            resume_structure_json = json.loads(resume_structure_json) if isinstance(resume_structure_json, str) else {"score": {"pointsAwarded": 0}}
+        
+        if not isinstance(action_words_json, dict):
+            print("Warning: action_words_json is not a dictionary")
+            action_words_json = json.loads(action_words_json) if isinstance(action_words_json, str) else {"score": {"pointsAwarded": 0}}
+        
+        if not isinstance(measurable_results_json, dict):
+            print("Warning: measurable_results_json is not a dictionary")
+            measurable_results_json = json.loads(measurable_results_json) if isinstance(measurable_results_json, str) else {"score": {"pointsAwarded": 0}}
+        
+        if not isinstance(bullet_point_effectiveness_json, dict):
+            print("Warning: bullet_point_effectiveness_json is not a dictionary")
+            bullet_point_effectiveness_json = json.loads(bullet_point_effectiveness_json) if isinstance(bullet_point_effectiveness_json, str) else {"score": {"pointsAwarded": 0}}
+        
+        # Now calculate the overall score
+        overall_resume_score = overall_score(
+            keyword_match_json['score']['pointsAwarded'], 
+            job_experience_json['score']['pointsAwarded'], 
+            skills_certifications_json['score']['pointsAwarded'], 
+            resume_structure_json['score']['pointsAwarded'], 
+            action_words_json['score']['pointsAwarded'], 
+            measurable_results_json['score']['pointsAwarded'], 
+            bullet_point_effectiveness_json['score']['pointsAwarded']
+        )
+        
+        # Combine all the JSON results into a single dictionary
+        result = {
+            "overall_score": overall_resume_score,
+            "keyword_match": keyword_match_json,
+            "job_experience": job_experience_json,
+            "skills_certifications": skills_certifications_json,
+            "resume_structure": resume_structure_json,
+            "action_words": action_words_json,
+            "measurable_results": measurable_results_json,
+            "bullet_point_effectiveness": bullet_point_effectiveness_json
+        }
+        
+        return result
     
-    # Combine all the JSON results into a single dictionary
-    result = {
-        "keyword_match": keyword_match_json,
-        "job_experience": job_experience_json,
-        "skills_certifications": skills_certifications_json,
-        "resume_structure": resume_structure_json,
-        "action_words": action_words_json,
-        "measurable_results": measurable_results_json,
-        "bullet_point_effectiveness": bullet_point_effectiveness_json
-    }
-    
-    # Return the combined result as JSON
-    return result
+    except Exception as e:
+        print(f"Error in detail_resume_analysis: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Return a minimal structure to prevent frontend errors
+        return {
+            "overall_score": 0,
+            "keyword_match": {"score": {"pointsAwarded": 0, "matchPercentage": 0, "rating": "Error"}, "analysis": {"matchedKeywords": [], "missingKeywords": []}},
+            "job_experience": {"score": {"pointsAwarded": 0, "alignmentPercentage": 0, "rating": "Error"}, "analysis": {"strongMatches": [], "partialMatches": [], "missingExperience": []}},
+            "skills_certifications": {"score": {"pointsAwarded": 0, "matchPercentage": 0, "rating": "Error"}, "analysis": {"matchedSkills": [], "missingSkills": [], "certificationMatch": []}},
+            "resume_structure": {"score": {"pointsAwarded": 0, "completedSections": 0, "totalMustHaveSections": 4}, "analysis": {"sectionStatus": []}},
+            "action_words": {"score": {"pointsAwarded": 0, "actionVerbPercentage": 0}, "analysis": {"strongActionVerbs": [], "weakActionVerbs": []}},
+            "measurable_results": {"score": {"pointsAwarded": 0, "measurableResultsCount": 0}, "analysis": {"measurableResults": [], "opportunitiesForMetrics": []}},
+            "bullet_point_effectiveness": {"score": {"pointsAwarded": 0, "effectiveBulletPercentage": 0}, "analysis": {"effectiveBullets": [], "ineffectiveBullets": []}}
+        }
 
+def overall_score(score1, score2, score3, score4, score5, score6, score7):
+    # Convert all scores to float or int, with default of 0
+    try:
+        s1 = float(score1) if score1 is not None else 0
+        s2 = float(score2) if score2 is not None else 0
+        s3 = float(score3) if score3 is not None else 0
+        s4 = float(score4) if score4 is not None else 0
+        s5 = float(score5) if score5 is not None else 0
+        s6 = float(score6) if score6 is not None else 0
+        s7 = float(score7) if score7 is not None else 0
+        
+        return ((s1/20)*20) + ((s2/20)*20) + ((s3/15)*15) + ((s4/15)*15) + ((s5/10)*10) + ((s6/10)*10) + ((s7/10)*10)
+    except (ValueError, TypeError) as e:
+        print(f"Error calculating overall score: {e}")
+        print(f"Scores: {score1}, {score2}, {score3}, {score4}, {score5}, {score6}, {score7}")
+        return 0

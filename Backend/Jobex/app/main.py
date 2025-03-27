@@ -31,34 +31,34 @@ async def job_analysis(
     jobData: str = Form(...)
 ):
     try:
-        # Parse job data
         job_data_dict = json.loads(jobData)
         
-        # Validate file type
-        if not resume.content_type == "application/pdf":
-            return {"error": "Only PDF files are accepted"}
+        # Add validation for job description
+        if not job_data_dict.get("description"):
+            return {"error": "Job description is required"}
             
-        # Extract text from the resume PDF file
+        if len(job_data_dict["description"]) < 100:
+            return {"error": "Job description is too short"}
+            
+        # Extract and validate resume text
         resume_text = extract_text_from_pdf(resume.file)
-        
         if not resume_text or len(resume_text.strip()) < 50:
             return {"error": "Failed to extract text from PDF or content is too short"}
             
-        # Extract resume components using OpenAI
+        # Log inputs for debugging
+        print(f"Job Description (first 100 chars): {job_data_dict['description'][:100]}")
+        print(f"Resume Text (first 100 chars): {resume_text[:100]}")
+        
         components = extract_components_openai(resume_text)
-        print("Resume components extracted")
-        
-        if "error" in components:
-            return components
-        
-        # Log the job description for analysis
-        print("Job Description Length:", len(job_data_dict["description"]))
-        print("Resume Text Length:", len(resume_text))
-        
-        # Initialize the analyzer with the resume text and job description
+        if not isinstance(components, dict):
+            return {"error": "Invalid resume components structure"}
+            
         analysis = detail_resume_analysis(components, job_data_dict["description"])
         
-        # Return the results with job context
+        # Validate analysis results
+        if not analysis.get("overall_score"):
+            return {"error": "Invalid analysis results"}
+            
         return {
             "job_context": {
                 "title": job_data_dict.get("jobTitle", "Job Position"),
@@ -69,10 +69,8 @@ async def job_analysis(
         }
         
     except Exception as e:
-        import traceback
-        print(f"Error: {str(e)}")
-        print(traceback.format_exc())
-        return {"error": f"Process failed: {str(e)}", "traceback": traceback.format_exc()}
+        print(f"Error in job_analysis: {str(e)}")
+        return {"error": f"Analysis failed: {str(e)}"}
 
 
 # def format_analysis_results(analysis):

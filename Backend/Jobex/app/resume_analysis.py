@@ -24,7 +24,7 @@ resume_sections = [
     {"section": "Publication", "symbol": "💡", "mandatory": False}
 ]
 
-def evaluate_resume_sections(resume_json, resume_sections):
+def evaluate_resume_sections(resume_json):
     """
     Evaluate the presence of sections in a resume JSON against mandatory and optional indicators.
 
@@ -57,6 +57,7 @@ def evaluate_resume_sections(resume_json, resume_sections):
                 result["missing"]["mandatory"].append(section_name)
             else:
                 result["missing"]["optional"].append(section_name)
+    print(result)
 
     return result
 
@@ -64,56 +65,38 @@ def evaluate_resume_sections(resume_json, resume_sections):
 
 
 def gen_model(prompt):
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo-16k",  # Using 16k model for longer context
-        messages=[
-            {"role": "system", "content": "You are a resume analysis specialist that extracts structured information from resumes and returns it as valid JSON. Only respond with valid JSON, no explanations or extra text."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.1,  # Lower temperature for more consistent output
-        max_tokens=4000   # Increased token limit for comprehensive analysis
-    )
-    
-    # Extract the assistant's response
-    result = response.choices[0].message.content
-    
-    # Clean the result in case there are any leading/trailing characters
-    result = result.strip()
-    
-    # Remove any markdown code block formatting if present
-    if result.startswith("```json"):
-        result = result[7:]
-    if result.startswith("```"):
-        result = result[3:]
-    if result.endswith("```"):
-        result = result[:-3]
-        
-    result = result.strip()
-    
-    # Parse the string to a Python dictionary
     try:
-        return json.loads(result)
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON: {e}")
-        print(f"Raw response: {result}")
-        # Return a default structure to prevent errors
-        return {
-            "score": {
-                "matchPercentage": 0,
-                "pointsAwarded": 0,
-                "rating": "Error",
-                "ratingSymbol": "❌"
-            },
-            "analysis": {
-                "matchedKeywords": [],
-                "missingKeywords": [],
-                "suggestedImprovements": "Failed to parse analysis."
-            }
-        }
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo-16k",
+            messages=[
+                {"role": "system", "content": "You are a resume analysis specialist that extracts structured information from resumes and returns it as valid JSON. Only respond with valid JSON, no explanations or extra text."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,  # Increase temperature for more variation
+            max_tokens=4000
+        )
+        
+        result = response.choices[0].message.content.strip()
+        
+        # Validate JSON structure
+        parsed_result = json.loads(result)
+        if not isinstance(parsed_result, dict):
+            raise ValueError("Response is not a valid JSON object")
+            
+        return parsed_result
+        
+    except Exception as e:
+        print(f"Error in gen_model: {str(e)}")
+        print(f"Prompt: {prompt[:200]}...")  # Log truncated prompt
+        raise  # Re-raise the exception instead of returning default
 
 
 def keyword_match(resume_text, job_description):
-    prompt = '''Given the job description: {job_description}
+    # Add validation
+    if not job_description or not resume_text:
+        raise ValueError("Job description or resume text is empty")
+        
+    prompt = f"""Given the job description: {job_description}
 
         And the resume text: {resume_text}
 
@@ -129,40 +112,45 @@ def keyword_match(resume_text, job_description):
             * Below 30% match: 0 points, "Poor" rating (❌)
 
         2. JSON STRUCTURE:
-        {
-            "score": {
-            "matchPercentage": [percentage],
-            "pointsAwarded": [points],
-            "rating": "[rating text]",
-            "ratingSymbol": "[emoji]"
-            },
-            "analysis": {
-            "matchedKeywords": [array of matched keywords],
-            "missingKeywords": [array of missing keywords],
-            "suggestedImprovements": "[detailed improvement suggestions]"
-            }
-        }
+        {{
+            "score": {{
+                "matchPercentage": 0,
+                "pointsAwarded": 0,
+                "rating": "rating text",
+                "ratingSymbol": "emoji"
+            }},
+            "analysis": {{
+                "matchedKeywords": [],
+                "missingKeywords": [],
+                "suggestedImprovements": "detailed improvement suggestions"
+            }}
+        }}
 
         3. DETAILED ANALYSIS REQUIREMENTS:
         - Extract all relevant skills and keywords from the job description
         - Compare with skills and keywords in the resume
         - For "matchedKeywords": List all job-related keywords found in the resume
         - For "missingKeywords": List all job-related keywords not found in the resume
-        - For "suggestedImprovements": Provide actionable suggestions on how to incorporate missing keywords naturally in relevant resume sections'''
+        - For "suggestedImprovements": Provide actionable suggestions on how to incorporate missing keywords naturally in relevant resume sections"""
     
     response = gen_model(prompt)
-
+    
+    # Validate response
+    if not response.get('score') or not response.get('analysis'):
+        print(f"Invalid response structure: {response}")
+        raise ValueError("Invalid response from model")
+        
     return response
 
 def job_experience(resume_text, job_description):
-    prompt = '''Given the job description: {job_description}
+    prompt = f"""Given the job description: {job_description}
 
         And the resume text: {resume_text}
 
         Analyze how well the work experience in the resume aligns with the job responsibilities. Generate a JSON response that includes a job experience alignment score and detailed analysis. Follow these specifications:
 
         1. SCORING SYSTEM:
-        - Calculate the percentage of job responsibilities in the job description that are covered in the resume's work experience
+        - Calculate the percentage of job responsibilities covered in the resume's work experience
         - Assign points and ratings based on alignment percentage:
             * 80%+ match: 20 points, "Strong match" rating (✅)
             * 60-79% match: 15 points, "Good alignment" rating (👍)
@@ -171,48 +159,40 @@ def job_experience(resume_text, job_description):
             * Below 20% match: 0 points, "No relevant experience" rating (❌)
 
         2. JSON STRUCTURE:
-        {
-            "score": {
-            "alignmentPercentage": [percentage],
-            "pointsAwarded": [points],
-            "rating": "[rating text]",
-            "ratingSymbol": "[emoji]"
-            },
-            "analysis": {
-            "strongMatches": [
-                {
-                "responsibility": "[job responsibility]",
-                "status": "Strong Match",
-                "notes": "[specific experience from resume]"
-                }
-            ],
-            "partialMatches": [
-                {
-                "responsibility": "[job responsibility]",
-                "status": "Partial Match",
-                "notes": "[limited experience mentioned]"
-                }
-            ],
-            "missingExperience": [
-                {
-                "responsibility": "[job responsibility]",
-                "status": "Missing",
-                "notes": "Not mentioned in resume"
-                }
-            ],
-            "suggestedImprovements": "[detailed improvement suggestions]"
-            }
-        }
+        {{
+            "score": {{
+                "alignmentPercentage": 0,
+                "pointsAwarded": 0,
+                "rating": "rating text",
+                "ratingSymbol": "emoji"
+            }},
+            "analysis": {{
+                "strongMatches": [
+                    {{
+                        "responsibility": "job responsibility",
+                        "status": "Strong Match",
+                        "notes": "specific experience from resume"
+                    }}
+                ],
+                "partialMatches": [
+                    {{
+                        "responsibility": "job responsibility",
+                        "status": "Partial Match",
+                        "notes": "limited experience mentioned"
+                    }}
+                ],
+                "missingExperience": [
+                    {{
+                        "responsibility": "job responsibility",
+                        "status": "Missing",
+                        "notes": "Not mentioned in resume"
+                    }}
+                ],
+                "suggestedImprovements": "detailed improvement suggestions"
+            }}
+        }}"""
 
-        3. DETAILED ANALYSIS REQUIREMENTS:
-        - Extract all key job responsibilities from the job description
-        - Compare with work experience described in the resume
-        - For "strongMatches": List job responsibilities that are well covered in the resume with specific examples
-        - For "partialMatches": List responsibilities that are mentioned but lack depth or detailed examples
-        - For "missingExperience": List responsibilities that are completely missing from the resume
-        - For "suggestedImprovements": Provide actionable suggestions on how to better align resume experience with job responsibilities'''
     response = gen_model(prompt)
-
     return response
 
 def skills_certifications(resume_text, job_description):
@@ -278,7 +258,7 @@ def skills_certifications(resume_text, job_description):
 
     return response
 
-def resume_structure(resume_text):
+def resume_structure(resume_text, sections):
     try:
         present_sections = list(resume_text.keys())
     except json.JSONDecodeError:
@@ -287,7 +267,7 @@ def resume_structure(resume_text):
 
     prompt = '''Given the resume text: {resume_text}
 
-        These are the present sections: {present_sections}
+        These are the sections in the resume: {sections}
 
         Analyze the structure of the resume for ATS parsing and readability. Generate a JSON response that includes a resume structure score and detailed analysis. Follow these specifications:
 
@@ -541,10 +521,13 @@ def bullet_point_effectiveness(resume_text):
 def detail_resume_analysis(resume_text, job_description):
     # Perform the analysis and store the results
     try:
+
+        sections = evaluate_resume_sections(resume_text)
+
         keyword_match_json = keyword_match(resume_text, job_description)
         job_experience_json = job_experience(resume_text, job_description)
         skills_certifications_json = skills_certifications(resume_text, job_description)
-        resume_structure_json = resume_structure(resume_text)
+        resume_structure_json = resume_structure(resume_text,sections)
         action_words_json = action_words(resume_text, job_description)
         measurable_results_json = measurable_results(resume_text, job_description)
         bullet_point_effectiveness_json = bullet_point_effectiveness(resume_text)
@@ -600,6 +583,23 @@ def detail_resume_analysis(resume_text, job_description):
             "measurable_results": measurable_results_json,
             "bullet_point_effectiveness": bullet_point_effectiveness_json
         }
+        
+        # After receiving responses from gen_model, normalize the data structure:
+        def normalize_skills_list(skills_list):
+            """Ensure skills list items are all objects with consistent structure"""
+            normalized = []
+            for skill in skills_list:
+                if isinstance(skill, str):
+                    normalized.append({"skill": skill, "status": "Found in Resume", "symbol": "✅"})
+                else:
+                    normalized.append(skill)
+            return normalized
+
+        # Apply this to skills_certifications_json
+        if 'analysis' in skills_certifications_json and 'matchedSkills' in skills_certifications_json['analysis']:
+            skills_certifications_json['analysis']['matchedSkills'] = normalize_skills_list(
+                skills_certifications_json['analysis']['matchedSkills']
+            )
         
         return result
     

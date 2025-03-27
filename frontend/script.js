@@ -129,17 +129,7 @@ function displayResults(resultsContainer, data) {
     const overallScore = analysis.overall_score || 0;
     
     // Determine color based on overall score
-    let scoreColor = '#F44336'; // Red for low scores
-    if (overallScore >= 85) scoreColor = '#4CAF50'; // Green for excellent
-    else if (overallScore >= 70) scoreColor = '#2196F3'; // Blue for good
-    else if (overallScore >= 55) scoreColor = '#FF9800'; // Orange for fair
-    
-    // Determine match level based on overall score
-    let matchLevel = "Poor Match";
-    if (overallScore >= 85) matchLevel = "Excellent Match";
-    else if (overallScore >= 70) matchLevel = "Strong Match";
-    else if (overallScore >= 55) matchLevel = "Good Match";
-    else if (overallScore >= 40) matchLevel = "Fair Match";
+    const scoreColor = getScoreColor(overallScore);
     
     // Create score visualization
     const scoreSection = document.createElement('div');
@@ -149,9 +139,9 @@ function displayResults(resultsContainer, data) {
     scoreSection.innerHTML = `
         <div class="overall-score-container">
             <div class="overall-score-circle" style="background: conic-gradient(${scoreColor} ${overallScore}%, #e0e0e0 0)">
-                <div class="overall-score-value">${overallScore}</div>
+                <div class="overall-score-value">${Math.round(overallScore)}</div>
             </div>
-            <div class="overall-score-label">${matchLevel}</div>
+            <div class="overall-score-label">${getMatchLevel(overallScore)}</div>
         </div>
     `;
     resultsCard.appendChild(scoreSection);
@@ -161,9 +151,7 @@ function displayResults(resultsContainer, data) {
     detailAnalysisButton.className = 'detail-analysis-button';
     detailAnalysisButton.innerHTML = '📊 View Detailed Analysis';
     detailAnalysisButton.onclick = () => {
-        // Create a new window/tab with the detailed analysis
-        const detailWindow = window.open('', '_blank');
-        displayDetailedAnalysis(detailWindow, analysis);
+        displayDetailedAnalysisInPopup(resultsContainer, analysis);
     };
     resultsCard.appendChild(detailAnalysisButton);
     
@@ -177,681 +165,834 @@ function displayResults(resultsContainer, data) {
     resultsContainer.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Add new function to display detailed analysis in new tab
-function displayDetailedAnalysis(window, analysis) {
-    const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Detailed Resume Analysis</title>
-            <style>
-                body {
-                    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-                    line-height: 1.6;
-                    margin: 0;
-                    padding: 20px;
-                    background: #f8fafc;
-                    color: #334155;
-                }
-                .container {
-                    max-width: 1200px;
-                    margin: 0 auto;
-                    padding: 20px;
-                    background: white;
-                    border-radius: 12px;
-                    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-                }
-                .header {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    margin-bottom: 20px;
-                    padding-bottom: 20px;
-                    border-bottom: 1px solid #e2e8f0;
-                }
-                .header h1 {
-                    margin: 0;
-                    color: #1e293b;
-                }
-                .overall-score {
-                    display: flex;
-                    align-items: center;
-                    gap: 15px;
-                }
-                .score-circle {
-                    width: 80px;
-                    height: 80px;
-                    border-radius: 50%;
-                    background: conic-gradient(#3b82f6 ${analysis.overall_score}%, #e2e8f0 0);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    position: relative;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                }
-                .score-circle::before {
-                    content: '';
-                    position: absolute;
-                    width: 70px;
-                    height: 70px;
-                    border-radius: 50%;
-                    background: white;
-                }
-                .score-value {
-                    position: relative;
-                    font-size: 24px;
-                    font-weight: bold;
-                    color: #1e293b;
-                }
-                .section {
-                    margin-bottom: 30px;
-                    padding: 20px;
-                    background: #fff;
-                    border-radius: 8px;
-                    border: 1px solid #e2e8f0;
-                }
-                .section-title {
-                    font-size: 1.5em;
-                    color: #1e293b;
-                    margin-bottom: 15px;
-                    padding-bottom: 10px;
-                    border-bottom: 2px solid #e2e8f0;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                }
-                .metric {
-                    display: flex;
-                    align-items: center;
-                    margin-bottom: 10px;
-                }
-                .metric-label {
-                    font-weight: 500;
-                    min-width: 200px;
-                }
-                .score-bar {
-                    height: 20px;
-                    background: #e2e8f0;
-                    border-radius: 10px;
-                    overflow: hidden;
-                    flex-grow: 1;
-                    margin: 0 15px;
-                }
-                .score-fill {
-                    height: 100%;
-                    background: #3b82f6;
-                    width: 0%;
-                    transition: width 1s ease-out;
-                }
-                .score-text {
-                    font-weight: 600;
-                    color: #1e293b;
-                    white-space: nowrap;
-                }
-                .analysis-list {
-                    list-style: none;
-                    padding: 0;
-                }
-                .analysis-item {
-                    padding: 12px;
-                    margin: 8px 0;
-                    background: #f8fafc;
-                    border-radius: 6px;
-                    border-left: 4px solid #3b82f6;
-                }
-                .matched { border-color: #10b981; color: #059669; }
-                .partial { border-color: #f59e0b; color: #b45309; }
-                .missing { border-color: #ef4444; color: #b91c1c; }
-                
-                .tabs {
-                    display: flex;
-                    flex-wrap: wrap;
-                    border-bottom: 1px solid #e2e8f0;
-                    margin-bottom: 20px;
-                }
-                .tab {
-                    padding: 10px 20px;
-                    cursor: pointer;
-                    border-bottom: 3px solid transparent;
-                    font-weight: 500;
-                }
-                .tab.active {
-                    border-bottom-color: #3b82f6;
-                    color: #3b82f6;
-                }
-                .tab-content {
-                    display: none;
-                }
-                .tab-content.active {
-                    display: block;
-                }
-                .grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-                    gap: 20px;
-                    margin-top: 20px;
-                }
-                .card {
-                    background: #f8fafc;
-                    border-radius: 8px;
-                    padding: 15px;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-                }
-                .card-title {
-                    font-weight: 600;
-                    margin-bottom: 10px;
-                    padding-bottom: 5px;
-                    border-bottom: 1px solid #e2e8f0;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                .recommendation {
-                    padding: 15px;
-                    margin: 10px 0;
-                    background: #f8fafc;
-                    border-radius: 8px;
-                    border-left: 4px solid #3b82f6;
-                }
-                .high { border-color: #ef4444; }
-                .medium { border-color: #f59e0b; }
-                .low { border-color: #10b981; }
-                .recommendation-header {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 8px;
-                    font-weight: 600;
-                }
-                .recommendation-priority {
-                    font-size: 12px;
-                    padding: 2px 8px;
-                    border-radius: 12px;
-                    background: #e2e8f0;
-                }
-                .high-priority { background: #fee2e2; color: #b91c1c; }
-                .medium-priority { background: #fef3c7; color: #92400e; }
-                .low-priority { background: #d1fae5; color: #065f46; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>Detailed Resume Analysis</h1>
-                    <div class="overall-score">
-                        <div class="score-circle">
-                            <span class="score-value">${analysis.overall_score}</span>
-                        </div>
-                        <div>
-                            <div style="font-weight: 600; font-size: 18px;">Overall Score</div>
-                            <div style="color: #64748b;">Based on 7 key categories</div>
-                        </div>
+function displayDetailedAnalysisInPopup(container, analysis) {
+    // Clear existing content
+    container.innerHTML = '';
+    
+    // Create the detailed analysis container
+    const analysisContainer = document.createElement('div');
+    analysisContainer.className = 'detailed-analysis-container';
+    
+    // Add header with back button
+    const header = `
+        <div class="analysis-header">
+            <button class="back-button" id="analysis-back-button">← Back</button>
+            <h1>Detailed Analysis</h1>
+            <div class="overall-score">
+                <div class="score-circle" style="background: conic-gradient(${getScoreColor(analysis.overall_score)} ${analysis.overall_score}%, #e0e0e0 0)">
+                    <span class="score-value">${Math.round(analysis.overall_score)}</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Create tabs navigation
+    const tabsNav = `
+        <div class="tabs">
+            <button class="tab active" data-tab="summary">Summary</button>
+            <button class="tab" data-tab="keyword">Keywords</button>
+            <button class="tab" data-tab="experience">Experience</button>
+            <button class="tab" data-tab="skills">Skills</button>
+            <button class="tab" data-tab="structure">Structure</button>
+            <button class="tab" data-tab="actions">Action Words</button>
+            <button class="tab" data-tab="results">Measurable Results</button>
+            <button class="tab" data-tab="bullets">Bullet Points</button>
+        </div>
+    `;
+
+    // Create content sections for all tabs
+    const contentSections = `
+        <div class="tab-contents">
+            <div id="summary-content" class="tab-content active">
+                <div class="score-breakdown">
+                    <h3>Score Breakdown</h3>
+                    ${createScoreBar('Keyword Match', analysis.keyword_match.score.matchPercentage, analysis.keyword_match.score.pointsAwarded, 20)}
+                    ${createScoreBar('Job Experience', analysis.job_experience.score.alignmentPercentage, analysis.job_experience.score.pointsAwarded, 20)}
+                    ${createScoreBar('Skills & Certifications', analysis.skills_certifications.score.matchPercentage, analysis.skills_certifications.score.pointsAwarded, 15)}
+                    ${createScoreBar('Resume Structure', (analysis.resume_structure.score.pointsAwarded/15)*100, analysis.resume_structure.score.pointsAwarded, 15)}
+                    ${createScoreBar('Action Words', analysis.action_words.score.actionVerbPercentage, analysis.action_words.score.pointsAwarded, 10)}
+                    ${createScoreBar('Measurable Results', (analysis.measurable_results.score.pointsAwarded/10)*100, analysis.measurable_results.score.pointsAwarded, 10)}
+                    ${createScoreBar('Bullet Points', analysis.bullet_point_effectiveness.score.effectiveBulletPercentage, analysis.bullet_point_effectiveness.score.pointsAwarded, 10)}
+                </div>
+            </div>
+
+            <!-- Keyword Match Tab -->
+            <div id="keyword-content" class="tab-content">
+                <h3>Keyword Analysis</h3>
+                <div class="analysis-section">
+                    <div class="metric-summary">
+                        <span class="metric-label">Match Percentage:</span>
+                        <span class="metric-value">${analysis.keyword_match.score.matchPercentage}% (${analysis.keyword_match.score.rating || ''})</span>
                     </div>
-                </div>
-                
-                <div class="tabs">
-                    <div class="tab active" data-tab="summary">Summary</div>
-                    <div class="tab" data-tab="keyword">Keyword Match</div>
-                    <div class="tab" data-tab="experience">Job Experience</div>
-                    <div class="tab" data-tab="skills">Skills & Certifications</div>
-                    <div class="tab" data-tab="structure">Resume Structure</div>
-                    <div class="tab" data-tab="actions">Action Words</div>
-                    <div class="tab" data-tab="results">Measurable Results</div>
-                    <div class="tab" data-tab="bullets">Bullet Points</div>
-                    <div class="tab" data-tab="recommendations">Recommendations</div>
-                </div>
-                
-                <!-- Summary Tab -->
-                <div class="tab-content active" id="summary-tab">
-                    <div class="section">
-                        <h2 class="section-title">📊 Score Breakdown</h2>
-                        
-                        <div class="metric">
-                            <span class="metric-label">🎯 Keyword Match</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${analysis.keyword_match.score.matchPercentage}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.keyword_match.score.pointsAwarded}/20 points</span>
-                        </div>
-                        
-                        <div class="metric">
-                            <span class="metric-label">💼 Job Experience</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${analysis.job_experience.score.alignmentPercentage}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.job_experience.score.pointsAwarded}/20 points</span>
-                        </div>
-                        
-                        <div class="metric">
-                            <span class="metric-label">📚 Skills & Certifications</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${analysis.skills_certifications.score.matchPercentage}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.skills_certifications.score.pointsAwarded}/15 points</span>
-                        </div>
-                        
-                        <div class="metric">
-                            <span class="metric-label">📝 Resume Structure</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${(analysis.resume_structure.score.pointsAwarded/15)*100}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.resume_structure.score.pointsAwarded}/15 points</span>
-                        </div>
-                        
-                        <div class="metric">
-                            <span class="metric-label">💪 Action Words</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${analysis.action_words.score.actionVerbPercentage}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.action_words.score.pointsAwarded}/10 points</span>
-                        </div>
-                        
-                        <div class="metric">
-                            <span class="metric-label">📊 Measurable Results</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${(analysis.measurable_results.score.pointsAwarded/10)*100}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.measurable_results.score.pointsAwarded}/10 points</span>
-                        </div>
-                        
-                        <div class="metric">
-                            <span class="metric-label">✍️ Bullet Point Effectiveness</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${analysis.bullet_point_effectiveness.score.effectiveBulletPercentage}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.bullet_point_effectiveness.score.pointsAwarded}/10 points</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Keyword Match Tab -->
-                <div class="tab-content" id="keyword-tab">
-                    <div class="section">
-                        <h2 class="section-title">🎯 Keyword Match Analysis</h2>
-                        <div class="metric">
-                            <span class="metric-label">Match Percentage</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${analysis.keyword_match.score.matchPercentage}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.keyword_match.score.matchPercentage}% (${analysis.keyword_match.score.rating})</span>
-                        </div>
-                        
-                        <h3>Matched Keywords</h3>
-                        <div class="analysis-list">
-                            ${analysis.keyword_match.analysis.matchedKeywords.map(keyword => 
-                                `<div class="analysis-item matched">✅ ${keyword}</div>`
-                            ).join('')}
-                        </div>
-                        
-                        <h3>Missing Keywords</h3>
-                        <div class="analysis-list">
-                            ${analysis.keyword_match.analysis.missingKeywords.map(keyword => 
-                                `<div class="analysis-item missing">❌ ${keyword}</div>`
-                            ).join('')}
-                        </div>
-                        
-                        <h3>Improvement Suggestions</h3>
-                        <p>${analysis.keyword_match.analysis.suggestedImprovements}</p>
-                    </div>
-                </div>
-                
-                <!-- Job Experience Tab -->
-                <div class="tab-content" id="experience-tab">
-                    <div class="section">
-                        <h2 class="section-title">💼 Job Experience Analysis</h2>
-                        <div class="metric">
-                            <span class="metric-label">Alignment Percentage</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${analysis.job_experience.score.alignmentPercentage}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.job_experience.score.alignmentPercentage}% (${analysis.job_experience.score.rating})</span>
-                        </div>
-                        
-                        <h3>Strong Matches</h3>
-                        <div class="analysis-list">
-                            ${analysis.job_experience.analysis.strongMatches.map(match => `
-                                <div class="analysis-item matched">
-                                    <strong>✅ ${match.responsibility}</strong><br>
-                                    ${match.notes}
-                                </div>
-                            `).join('')}
-                        </div>
-                        
-                        <h3>Partial Matches</h3>
-                        <div class="analysis-list">
-                            ${analysis.job_experience.analysis.partialMatches.map(match => `
-                                <div class="analysis-item partial">
-                                    <strong>⚠️ ${match.responsibility}</strong><br>
-                                    ${match.notes}
-                                </div>
-                            `).join('')}
-                        </div>
-                        
-                        <h3>Missing Experience</h3>
-                        <div class="analysis-list">
-                            ${analysis.job_experience.analysis.missingExperience.map(exp => `
-                                <div class="analysis-item missing">
-                                    <strong>❌ ${exp.responsibility}</strong><br>
-                                    ${exp.notes}
-                                </div>
-                            `).join('')}
-                        </div>
-                        
-                        <h3>Improvement Suggestions</h3>
-                        <p>${analysis.job_experience.analysis.suggestedImprovements}</p>
-                    </div>
-                </div>
-                
-                <!-- Skills Tab -->
-                <div class="tab-content" id="skills-tab">
-                    <div class="section">
-                        <h2 class="section-title">📚 Skills & Certifications Analysis</h2>
-                        <div class="metric">
-                            <span class="metric-label">Match Percentage</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${analysis.skills_certifications.score.matchPercentage}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.skills_certifications.score.matchPercentage}% (${analysis.skills_certifications.score.rating})</span>
-                        </div>
-                        
-                        <div class="grid">
-                            <div class="card">
-                                <div class="card-title">✅ Matched Skills</div>
-                                ${analysis.skills_certifications.analysis.matchedSkills.map(skill => 
-                                    `<div class="analysis-item matched">${typeof skill === 'object' ? skill.skill : skill}</div>`
-                                ).join('')}
-                            </div>
-                            
-                            <div class="card">
-                                <div class="card-title">❌ Missing Skills</div>
-                                ${analysis.skills_certifications.analysis.missingSkills.map(skill => 
-                                    `<div class="analysis-item missing">${typeof skill === 'object' ? skill.skill : skill}</div>`
-                                ).join('')}
-                            </div>
-                            
-                            <div class="card">
-                                <div class="card-title">🎓 Certifications</div>
-                                ${analysis.skills_certifications.analysis.certificationMatch ? 
-                                    analysis.skills_certifications.analysis.certificationMatch.map(cert => 
-                                        `<div class="analysis-item ${cert.status === 'Found' ? 'matched' : 'missing'}">${cert.symbol} ${cert.certification}</div>`
-                                    ).join('') : 
-                                    '<div class="analysis-item">No certification data available</div>'
-                                }
-                            </div>
-                        </div>
-                        
-                        <h3>Improvement Suggestions</h3>
-                        <p>${analysis.skills_certifications.analysis.suggestedImprovements || 'Focus on adding the missing skills to your resume in relevant context.'}</p>
-                    </div>
-                </div>
-                
-                <!-- Resume Structure Tab -->
-                <div class="tab-content" id="structure-tab">
-                    <div class="section">
-                        <h2 class="section-title">📝 Resume Structure Analysis</h2>
-                        <div class="metric">
-                            <span class="metric-label">Completed Sections</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${(analysis.resume_structure.score.completedSections/analysis.resume_structure.score.totalMustHaveSections)*100}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.resume_structure.score.completedSections}/${analysis.resume_structure.score.totalMustHaveSections} sections</span>
-                        </div>
-                        
-                        <h3>Section Status</h3>
-                        <div class="grid">
-                            <div class="card">
-                                <div class="card-title">📑 Section Analysis</div>
-                                ${analysis.resume_structure.analysis.sectionStatus ? 
-                                    analysis.resume_structure.analysis.sectionStatus.map(section => 
-                                        `<div class="analysis-item ${section.status === 'Completed' ? 'matched' : 'missing'}">
-                                            ${section.symbol || (section.status === 'Completed' ? '✅' : '❌')} ${section.section}: ${section.status}
-                                        </div>`
-                                    ).join('') : 
-                                    '<div class="analysis-item">No detailed section data available</div>'
-                                }
-                            </div>
-                        </div>
-                        
-                        <h3>Improvement Suggestions</h3>
-                        <p>${analysis.resume_structure.analysis.suggestedImprovements || 'Ensure all required sections are included in your resume for optimal ATS compatibility.'}</p>
-                    </div>
-                </div>
-                
-                <!-- Action Words Tab -->
-                <div class="tab-content" id="actions-tab">
-                    <div class="section">
-                        <h2 class="section-title">💪 Action Words Analysis</h2>
-                        <div class="metric">
-                            <span class="metric-label">Strong Action Verbs</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${analysis.action_words.score.actionVerbPercentage}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.action_words.score.actionVerbPercentage}%</span>
-                        </div>
-                        
-                        <h3>Strong Action Verbs</h3>
-                        <div class="analysis-list">
-                            ${analysis.action_words.analysis.strongActionVerbs ? 
-                                analysis.action_words.analysis.strongActionVerbs.map(item => 
-                                    `<div class="analysis-item matched">
-                                        <strong>✅ ${item.actionVerb}</strong><br>
-                                        ${item.bulletPoint}
-                                    </div>`
-                                ).join('') : 
-                                '<div class="analysis-item">No strong action verbs data available</div>'
-                            }
-                        </div>
-                        
-                        <h3>Weak Verbs</h3>
-                        <div class="analysis-list">
-                            ${analysis.action_words.analysis.weakActionVerbs ? 
-                                analysis.action_words.analysis.weakActionVerbs.map(item => 
-                                    `<div class="analysis-item missing">
-                                        <strong>⚠️ ${item.actionVerb}</strong> → Suggested: <strong>${item.suggestedReplacement}</strong><br>
-                                        ${item.bulletPoint}
-                                    </div>`
-                                ).join('') : 
-                                '<div class="analysis-item">No weak verbs data available</div>'
-                            }
-                        </div>
-                        
-                        <h3>Improvement Suggestions</h3>
-                        <p>${analysis.action_words.analysis.suggestedImprovements || 'Replace weak verbs with strong action verbs to make your resume more impactful.'}</p>
-                    </div>
-                </div>
-                
-                <!-- Measurable Results Tab -->
-                <div class="tab-content" id="results-tab">
-                    <div class="section">
-                        <h2 class="section-title">📊 Measurable Results Analysis</h2>
-                        <div class="metric">
-                            <span class="metric-label">Measurable Results Count</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${(analysis.measurable_results.score.measurableResultsCount/5)*100}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.measurable_results.score.measurableResultsCount} results</span>
-                        </div>
-                        
-                        <h3>Measurable Results Found</h3>
-                        <div class="analysis-list">
-                            ${analysis.measurable_results.analysis.measurableResults ? 
-                                analysis.measurable_results.analysis.measurableResults.map(item => 
-                                    `<div class="analysis-item matched">
-                                        <strong>✅ ${item.metric}</strong><br>
-                                        ${item.bulletPoint}
-                                    </div>`
-                                ).join('') : 
-                                '<div class="analysis-item">No measurable results data available</div>'
-                            }
-                        </div>
-                        
-                        <h3>Opportunities for Metrics</h3>
-                        <div class="analysis-list">
-                            ${analysis.measurable_results.analysis.opportunitiesForMetrics ? 
-                                analysis.measurable_results.analysis.opportunitiesForMetrics.map(item => 
-                                    `<div class="analysis-item missing">
-                                        <strong>💡 ${item.suggestion}</strong><br>
-                                        ${item.bulletPoint}
-                                    </div>`
-                                ).join('') : 
-                                '<div class="analysis-item">No opportunities data available</div>'
-                            }
-                        </div>
-                        
-                        <h3>Improvement Suggestions</h3>
-                        <p>${analysis.measurable_results.analysis.suggestedImprovements || 'Add specific metrics and quantifiable achievements to strengthen your resume.'}</p>
-                    </div>
-                </div>
-                
-                <!-- Bullet Points Tab -->
-                <div class="tab-content" id="bullets-tab">
-                    <div class="section">
-                        <h2 class="section-title">✍️ Bullet Point Effectiveness</h2>
-                        <div class="metric">
-                            <span class="metric-label">Effective Bullets</span>
-                            <div class="score-bar">
-                                <div class="score-fill" style="width: ${analysis.bullet_point_effectiveness.score.effectiveBulletPercentage}%"></div>
-                            </div>
-                            <span class="score-text">${analysis.bullet_point_effectiveness.score.effectiveBulletPercentage}%</span>
-                        </div>
-                        
-                        <h3>Effective Bullet Points</h3>
-                        <div class="analysis-list">
-                            ${analysis.bullet_point_effectiveness.analysis.effectiveBullets ? 
-                                analysis.bullet_point_effectiveness.analysis.effectiveBullets.map(item => 
-                                    `<div class="analysis-item matched">
-                                        <strong>✅ Word Count: ${item.wordCount}</strong><br>
-                                        ${item.bulletPoint}<br>
-                                        <small><strong>Strengths:</strong> ${item.strengths}</small>
-                                    </div>`
-                                ).join('') : 
-                                '<div class="analysis-item">No effective bullets data available</div>'
-                            }
-                        </div>
-                        
-                        <h3>Ineffective Bullet Points</h3>
-                        <div class="analysis-list">
-                            ${analysis.bullet_point_effectiveness.analysis.ineffectiveBullets ? 
-                                analysis.bullet_point_effectiveness.analysis.ineffectiveBullets.map(item => 
-                                    `<div class="analysis-item missing">
-                                        <strong>⚠️ Word Count: ${item.wordCount}</strong><br>
-                                        ${item.bulletPoint}<br>
-                                        <small><strong>Issues:</strong> ${item.issues}</small><br>
-                                        <small><strong>Suggested Revision:</strong> ${item.suggestedRevision}</small>
-                                    </div>`
-                                ).join('') : 
-                                '<div class="analysis-item">No ineffective bullets data available</div>'
-                            }
-                        </div>
-                        
-                        <h3>Improvement Suggestions</h3>
-                        <p>${analysis.bullet_point_effectiveness.analysis.suggestedImprovements || 'Improve bullet points by making them concise, specific, and impactful.'}</p>
-                    </div>
-                </div>
-                
-                <!-- Recommendations Tab -->
-                <div class="tab-content" id="recommendations-tab">
-                    <div class="section">
-                        <h2 class="section-title">💡 Personalized Recommendations</h2>
-                        
-                        <div class="analysis-list">
-                            ${analysis.keyword_match && analysis.keyword_match.analysis && analysis.keyword_match.analysis.suggestedImprovements ? 
-                                `<div class="recommendation high">
-                                    <div class="recommendation-header">
-                                        <span>🎯 Keyword Optimization</span>
-                                        <span class="recommendation-priority high-priority">HIGH</span>
-                                    </div>
-                                    <p>${analysis.keyword_match.analysis.suggestedImprovements}</p>
-                                </div>` : ''
-                            }
-                            
-                            ${analysis.job_experience && analysis.job_experience.analysis && analysis.job_experience.analysis.suggestedImprovements ? 
-                                `<div class="recommendation high">
-                                    <div class="recommendation-header">
-                                        <span>💼 Experience Alignment</span>
-                                        <span class="recommendation-priority high-priority">HIGH</span>
-                                    </div>
-                                    <p>${analysis.job_experience.analysis.suggestedImprovements}</p>
-                                </div>` : ''
-                            }
-                            
-                            ${analysis.skills_certifications && analysis.skills_certifications.analysis && analysis.skills_certifications.analysis.suggestedImprovements ? 
-                                `<div class="recommendation medium">
-                                    <div class="recommendation-header">
-                                        <span>📚 Skills Enhancement</span>
-                                        <span class="recommendation-priority medium-priority">MEDIUM</span>
-                                    </div>
-                                    <p>${analysis.skills_certifications.analysis.suggestedImprovements}</p>
-                                </div>` : ''
-                            }
-                            
-                            ${analysis.resume_structure && analysis.resume_structure.analysis && analysis.resume_structure.analysis.suggestedImprovements ? 
-                                `<div class="recommendation medium">
-                                    <div class="recommendation-header">
-                                        <span>📝 Structure Optimization</span>
-                                        <span class="recommendation-priority medium-priority">MEDIUM</span>
-                                    </div>
-                                    <p>${analysis.resume_structure.analysis.suggestedImprovements}</p>
-                                </div>` : ''
-                            }
-                            
-                            ${analysis.action_words && analysis.action_words.analysis && analysis.action_words.analysis.suggestedImprovements ? 
-                                `<div class="recommendation medium">
-                                    <div class="recommendation-header">
-                                        <span>💪 Action Verb Enhancement</span>
-                                        <span class="recommendation-priority medium-priority">MEDIUM</span>
-                                    </div>
-                                    <p>${analysis.action_words.analysis.suggestedImprovements}</p>
-                                </div>` : ''
-                            }
-                            
-                            ${analysis.measurable_results && analysis.measurable_results.analysis && analysis.measurable_results.analysis.suggestedImprovements ? 
-                                `<div class="recommendation high">
-                                    <div class="recommendation-header">
-                                        <span>📊 Results Enhancement</span>
-                                        <span class="recommendation-priority high-priority">HIGH</span>
-                                    </div>
-                                    <p>${analysis.measurable_results.analysis.suggestedImprovements}</p>
-                                </div>` : ''
-                            }
-                        </div>
+                    
+                    <h4>Matched Keywords</h4>
+                    ${createMatchedList(analysis.keyword_match.analysis.matchedKeywords)}
+                    
+                    <h4>Missing Keywords</h4>
+                    ${createMissingList(analysis.keyword_match.analysis.missingKeywords)}
+                    
+                    <div class="improvement-suggestions">
+                        <h4>Suggestions</h4>
+                        <p>${analysis.keyword_match.analysis.suggestedImprovements || 'No suggestions available'}</p>
                     </div>
                 </div>
             </div>
-        </body>
-        </html>
+
+            <!-- Job Experience Tab -->
+            <div id="experience-content" class="tab-content">
+                <h3>Job Experience Analysis</h3>
+                <div class="analysis-section">
+                    <div class="metric-summary">
+                        <span class="metric-label">Alignment Percentage:</span>
+                        <span class="metric-value">${analysis.job_experience.score.alignmentPercentage}% (${analysis.job_experience.score.rating || ''})</span>
+                    </div>
+                    
+                    <h4>Strong Matches</h4>
+                    ${createExperienceList(analysis.job_experience.analysis.strongMatches, 'matched')}
+                    
+                    <h4>Partial Matches</h4>
+                    ${createExperienceList(analysis.job_experience.analysis.partialMatches, 'partial')}
+                    
+                    <h4>Missing Experience</h4>
+                    ${createExperienceList(analysis.job_experience.analysis.missingExperience, 'missing')}
+                    
+                    <div class="improvement-suggestions">
+                        <h4>Suggestions</h4>
+                        <p>${analysis.job_experience.analysis.suggestedImprovements || 'No suggestions available'}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skills Tab -->
+            <div id="skills-content" class="tab-content">
+                <h3>Skills & Certifications Analysis</h3>
+                <div class="analysis-section">
+                    <div class="metric-summary">
+                        <span class="metric-label">Match Percentage:</span>
+                        <span class="metric-value">${analysis.skills_certifications.score.matchPercentage}% (${analysis.skills_certifications.score.rating || ''})</span>
+                    </div>
+                    
+                    <h4>Matched Skills</h4>
+                    ${createSkillsList(analysis.skills_certifications.analysis.matchedSkills, 'matched')}
+                    
+                    <h4>Missing Skills</h4>
+                    ${createSkillsList(analysis.skills_certifications.analysis.missingSkills, 'missing')}
+                    
+                    <h4>Certifications</h4>
+                    ${createCertificationsList(analysis.skills_certifications.analysis.certificationMatch)}
+                    
+                    <div class="improvement-suggestions">
+                        <h4>Suggestions</h4>
+                        <p>${analysis.skills_certifications.analysis.suggestedImprovements || 'No suggestions available'}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Structure Tab -->
+            <div id="structure-content" class="tab-content">
+                <h3>Resume Structure Analysis</h3>
+                <div class="analysis-section">
+                    <div class="metric-summary">
+                        <span class="metric-label">Completed Sections:</span>
+                        <span class="metric-value">${analysis.resume_structure.score.completedSections}/${analysis.resume_structure.score.totalMustHaveSections}</span>
+                    </div>
+                    
+                    <h4>Section Status</h4>
+                    ${createSectionsList(analysis.resume_structure.analysis.sectionStatus)}
+                    
+                    <div class="improvement-suggestions">
+                        <h4>Suggestions</h4>
+                        <p>${analysis.resume_structure.analysis.suggestedImprovements || 'No suggestions available'}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Words Tab -->
+            <div id="actions-content" class="tab-content">
+                <h3>Action Words Analysis</h3>
+                <div class="analysis-section">
+                    <div class="metric-summary">
+                        <span class="metric-label">Strong Action Verbs Percentage:</span>
+                        <span class="metric-value">${analysis.action_words.score.actionVerbPercentage}%</span>
+                    </div>
+                    
+                    <h4>Strong Action Verbs</h4>
+                    ${createActionVerbsList(analysis.action_words.analysis.strongActionVerbs || [], 'strong')}
+                    
+                    <h4>Weak Action Verbs</h4>
+                    ${createActionVerbsList(analysis.action_words.analysis.weakActionVerbs || [], 'weak')}
+                    
+                    <h4>Missing Action Verbs</h4>
+                    ${createActionVerbsList(analysis.action_words.analysis.missingActionVerbs || [], 'missing')}
+                    
+                    <div class="improvement-suggestions">
+                        <h4>Suggestions</h4>
+                        <p>${analysis.action_words.analysis.suggestedImprovements || 'No suggestions available'}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Measurable Results Tab -->
+            <div id="results-content" class="tab-content">
+                <h3>Measurable Results Analysis</h3>
+                <div class="analysis-section">
+                    <div class="metric-summary">
+                        <span class="metric-label">Measurable Results Count:</span>
+                        <span class="metric-value">${analysis.measurable_results.score.measurableResultsCount}</span>
+                    </div>
+                    
+                    <h4>Measurable Results Found</h4>
+                    ${createMeasurableResultsList(analysis.measurable_results.analysis.measurableResults || [])}
+                    
+                    <h4>Opportunities for Metrics</h4>
+                    ${createOpportunitiesList(analysis.measurable_results.analysis.opportunitiesForMetrics || [])}
+                    
+                    <div class="improvement-suggestions">
+                        <h4>Suggestions</h4>
+                        <p>${analysis.measurable_results.analysis.suggestedImprovements || 'No suggestions available'}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bullet Points Tab -->
+            <div id="bullets-content" class="tab-content">
+                <h3>Bullet Point Effectiveness</h3>
+                <div class="analysis-section">
+                    <div class="metric-summary">
+                        <span class="metric-label">Effective Bullets Percentage:</span>
+                        <span class="metric-value">${analysis.bullet_point_effectiveness.score.effectiveBulletPercentage}%</span>
+                    </div>
+                    
+                    <h4>Effective Bullet Points</h4>
+                    ${createBulletPointsList(analysis.bullet_point_effectiveness.analysis.effectiveBullets || [], 'effective')}
+                    
+                    <h4>Ineffective Bullet Points</h4>
+                    ${createBulletPointsList(analysis.bullet_point_effectiveness.analysis.ineffectiveBullets || [], 'ineffective')}
+                    
+                    <div class="improvement-suggestions">
+                        <h4>Suggestions</h4>
+                        <p>${analysis.bullet_point_effectiveness.analysis.suggestedImprovements || 'No suggestions available'}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     `;
-    
-    window.document.write(html);
-    
-    // Add a small delay to ensure DOM is fully loaded before attaching event handlers
-    setTimeout(() => {
-        const doc = window.document;
-        
-        // Fix tab navigation
-        doc.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                // Remove active class from all tabs and content
-                doc.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                doc.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                
-                // Add active class to clicked tab
-                tab.classList.add('active');
-                
-                // Show corresponding content
-                const tabName = tab.getAttribute('data-tab');
-                doc.getElementById(tabName + '-tab').classList.add('active');
-            });
+
+    // Combine all elements
+    analysisContainer.innerHTML = header + tabsNav + contentSections;
+    container.appendChild(analysisContainer);
+
+    // Add new styles to the page
+    addDetailedAnalysisStyles();
+
+    // Add tab switching functionality
+    const tabs = container.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs and contents
+            tabs.forEach(t => t.classList.remove('active'));
+            container.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding content
+            tab.classList.add('active');
+            const contentId = `${tab.dataset.tab}-content`;
+            container.querySelector(`#${contentId}`).classList.add('active');
         });
-        
-        // Animate score bars
-        doc.querySelectorAll('.score-fill').forEach(bar => {
+    });
+
+    // Add back button functionality
+    document.getElementById('analysis-back-button').addEventListener('click', () => {
+        location.reload();
+    });
+
+    // Animate score bars
+    setTimeout(() => {
+        container.querySelectorAll('.score-fill').forEach(bar => {
             const width = bar.style.width;
             bar.style.width = '0%';
             setTimeout(() => {
                 bar.style.width = width;
             }, 100);
         });
-    }, 500);
+    }, 100);
+}
+
+// Helper function to create score bars
+function createScoreBar(label, percentage, points, maxPoints) {
+    return `
+        <div class="score-item">
+            <div class="score-label">${label}</div>
+            <div class="score-bar-container">
+                <div class="score-bar">
+                    <div class="score-fill" style="width: ${percentage}%"></div>
+                </div>
+                <div class="score-points">${points}/${maxPoints}</div>
+            </div>
+        </div>
+    `;
+}
+
+// Helper function to create matched items list with better error handling
+function createMatchedList(items) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return `<div class="empty-list">No matched keywords found</div>`;
+    }
+    
+    return `
+        <div class="matched-items">
+            ${items.map(item => `
+                <div class="matched-item">
+                    <span class="match-icon">✓</span>
+                    <span class="match-text">${item}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Helper function to create missing items list
+function createMissingList(items) {
+    return `
+        <div class="missing-items">
+            ${items.map(item => `
+                <div class="missing-item">
+                    <span class="missing-icon">×</span>
+                    <span class="missing-text">${item}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Helper function to get color based on score
+function getScoreColor(score) {
+    if (score >= 85) return '#4CAF50'; // Green for excellent
+    if (score >= 70) return '#2196F3'; // Blue for good
+    if (score >= 55) return '#FF9800'; // Orange for fair
+    return '#F44336'; // Red for low scores
+}
+
+// Helper function for experience items
+function createExperienceList(items, type) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return `<div class="empty-list">No ${type} experience found</div>`;
+    }
+    
+    return `
+        <div class="${type}-items">
+            ${items.map(item => `
+                <div class="${type}-item">
+                    <div class="item-header">
+                        <span class="${type}-icon">${getIcon(type)}</span>
+                        <span class="item-title">${item.responsibility}</span>
+                    </div>
+                    <div class="item-details">
+                        ${item.notes}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Helper function to get appropriate icon
+function getIcon(type) {
+    switch(type) {
+        case 'matched':
+        case 'strong':
+            return '✅';
+        case 'partial':
+        case 'weak':
+            return '⚠️';
+        case 'missing':
+            return '❌';
+        default:
+            return '•';
+    }
+}
+
+// Helper function for skills
+function createSkillsList(items, type) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return `<div class="empty-list">No ${type} skills found</div>`;
+    }
+    
+    return `
+        <div class="${type}-items">
+            ${items.map(item => `
+                <div class="${type}-item">
+                    <span class="${type}-icon">${item.symbol}</span>
+                    <span class="item-text">${item.skill}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Helper function for certifications
+function createCertificationsList(items) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return `<div class="empty-list">No certifications found</div>`;
+    }
+    
+    return `
+        <div class="certification-items">
+            ${items.map(item => `
+                <div class="certification-item ${item.status === 'Found' ? 'matched' : 'missing'}">
+                    <span class="certification-icon">${item.symbol}</span>
+                    <span class="certification-text">${item.certification}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Helper function for sections
+function createSectionsList(items) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return `<div class="empty-list">No section data available</div>`;
+    }
+    
+    return `
+        <div class="section-items">
+            ${items.map(item => `
+                <div class="section-item ${item.status === 'Completed' ? 'matched' : 'missing'}">
+                    <span class="section-icon">${item.status === 'Completed' ? '✓' : '×'}</span>
+                    <span class="section-text">${item.section || ''}</span>
+                    <span class="section-status">${item.status || ''}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Helper function for action verbs
+function createActionVerbsList(items, type) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return `<div class="empty-list">No ${type} action verbs found</div>`;
+    }
+    
+    const icons = {
+        strong: '✓',
+        weak: '⚠',
+        missing: '×'
+    };
+    
+    return `
+        <div class="${type}-verbs">
+            ${items.map(item => `
+                <div class="${type}-verb-item">
+                    <div class="verb-header">
+                        <span class="${type}-icon">${icons[type]}</span>
+                        <span class="verb-text">${type === 'weak' ? 
+                            `<strong>${item.actionVerb || ''}</strong> → <span class="suggested">${item.suggestedReplacement || ''}</span>` : 
+                            (type === 'missing' ? 'Missing action verb' : `<strong>${item.actionVerb || ''}</strong>`)
+                        }</span>
+                    </div>
+                    <div class="verb-example">
+                        ${item.bulletPoint || ''}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Helper function for measurable results
+function createMeasurableResultsList(items) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return `<div class="empty-list">No measurable results found</div>`;
+    }
+    
+    return `
+        <div class="measurable-results">
+            ${items.map(item => `
+                <div class="measurable-result-item">
+                    <div class="result-header">
+                        <span class="result-icon">✓</span>
+                        <span class="result-metric">${item.metric || ''}</span>
+                    </div>
+                    <div class="result-text">
+                        ${item.bulletPoint || ''}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Helper function for opportunities
+function createOpportunitiesList(items) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return `<div class="empty-list">No opportunities for metrics found</div>`;
+    }
+    
+    return `
+        <div class="opportunities">
+            ${items.map(item => `
+                <div class="opportunity-item">
+                    <div class="opportunity-header">
+                        <span class="opportunity-icon">💡</span>
+                        <span class="opportunity-suggestion">${item.suggestion || ''}</span>
+                    </div>
+                    <div class="opportunity-text">
+                        ${item.bulletPoint || ''}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Helper function for bullet points
+function createBulletPointsList(items, type) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return `<div class="empty-list">No ${type} bullet points found</div>`;
+    }
+    
+    return `
+        <div class="${type}-bullets">
+            ${items.map(item => `
+                <div class="${type}-bullet-item">
+                    <div class="bullet-header">
+                        <span class="bullet-icon">${type === 'effective' ? '✓' : '×'}</span>
+                        <span class="bullet-count">Word Count: ${item.wordCount || 0}</span>
+                    </div>
+                    <div class="bullet-text">
+                        ${item.bulletPoint || ''}
+                    </div>
+                    <div class="bullet-feedback">
+                        <strong>${type === 'effective' ? 'Strengths' : 'Issues'}:</strong> 
+                        ${type === 'effective' ? (item.strengths || '') : (item.issues || '')}
+                    </div>
+                    ${type === 'ineffective' ? `
+                        <div class="bullet-suggestion">
+                            <strong>Suggested Revision:</strong> 
+                            ${item.suggestedRevision || ''}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Add styles for the detailed analysis
+function addDetailedAnalysisStyles() {
+    const styles = `
+        <style>
+            .detailed-analysis-container {
+                padding: 20px;
+                max-height: 600px;
+                overflow-y: auto;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }
+
+            .analysis-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+                border-bottom: 1px solid #e2e8f0;
+            }
+
+            .analysis-header h1 {
+                margin: 0;
+                font-size: 20px;
+                font-weight: 600;
+                color: #1e293b;
+            }
+
+            .back-button {
+                padding: 8px 16px;
+                background: #f1f5f9;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 500;
+                color: #475569;
+                transition: all 0.2s ease;
+            }
+
+            .back-button:hover {
+                background: #e2e8f0;
+                color: #1e293b;
+            }
+
+            .score-circle {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            }
+
+            .score-circle::before {
+                content: '';
+                position: absolute;
+                width: 42px;
+                height: 42px;
+                border-radius: 50%;
+                background: white;
+            }
+
+            .score-value {
+                position: relative;
+                font-size: 16px;
+                font-weight: bold;
+                color: #1e293b;
+            }
+
+            .tabs {
+                display: flex;
+                gap: 8px;
+                overflow-x: auto;
+                padding-bottom: 10px;
+                margin-bottom: 20px;
+                border-bottom: 1px solid #e2e8f0;
+            }
+
+            .tab {
+                padding: 8px 16px;
+                background: none;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                white-space: nowrap;
+                color: #64748b;
+                transition: all 0.2s ease;
+            }
+
+            .tab:hover {
+                background: #f1f5f9;
+                color: #334155;
+            }
+
+            .tab.active {
+                background: #3b82f6;
+                color: white;
+            }
+
+            .tab-content {
+                display: none;
+                animation: fadeIn 0.3s ease;
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+
+            .tab-content.active {
+                display: block;
+            }
+
+            .score-item {
+                margin-bottom: 15px;
+            }
+
+            .score-label {
+                margin-bottom: 5px;
+                font-weight: 500;
+                color: #475569;
+            }
+
+            .score-bar-container {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .score-bar {
+                flex-grow: 1;
+                height: 8px;
+                background: #e2e8f0;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+
+            .score-fill {
+                height: 100%;
+                background: #3b82f6;
+                transition: width 0.5s ease;
+            }
+
+            .score-points {
+                font-weight: 600;
+                color: #334155;
+                min-width: 50px;
+                text-align: right;
+            }
+
+            .analysis-section {
+                background: #f8fafc;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+            }
+
+            .metric-summary {
+                display: flex;
+                justify-content: space-between;
+                background: #f1f5f9;
+                padding: 10px 15px;
+                border-radius: 6px;
+                margin-bottom: 15px;
+            }
+
+            .metric-label {
+                font-weight: 500;
+                color: #475569;
+            }
+
+            .metric-value {
+                font-weight: 600;
+                color: #1e293b;
+            }
+
+            .matched-items, .missing-items, .matched-skills, .missing-skills,
+            .certification-items, .section-items, .strong-verbs, .weak-verbs,
+            .missing-verbs, .measurable-results, .opportunities,
+            .effective-bullets, .ineffective-bullets {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 15px;
+            }
+
+            .matched-item, .missing-item, .matched-skill, .missing-skill,
+            .certification-item, .section-item, .strong-verb-item, .weak-verb-item,
+            .missing-verb-item, .measurable-result-item, .opportunity-item,
+            .effective-bullet-item, .ineffective-bullet-item {
+                padding: 12px;
+                border-radius: 6px;
+                background: white;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            }
+
+            .matched-item, .matched-skill, .strong-verb-item, .measurable-result-item,
+            .effective-bullet-item {
+                border-left: 3px solid #10b981;
+            }
+
+            .missing-item, .missing-skill, .missing-verb-item, .ineffective-bullet-item {
+                border-left: 3px solid #ef4444;
+            }
+
+            .weak-verb-item, .opportunity-item {
+                border-left: 3px solid #f59e0b;
+            }
+
+            .match-icon, .matched-icon, .strong-icon {
+                color: #10b981;
+                margin-right: 8px;
+            }
+
+            .missing-icon {
+                color: #ef4444;
+                margin-right: 8px;
+            }
+
+            .partial-icon, .weak-icon {
+                color: #f59e0b;
+                margin-right: 8px;
+            }
+
+            .item-header, .verb-header, .result-header, .bullet-header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 8px;
+            }
+
+            .item-title, .verb-text, .result-metric, .bullet-count {
+                font-weight: 600;
+                margin-left: 8px;
+            }
+
+            .item-details, .verb-example, .result-text, .bullet-text, .opportunity-text {
+                color: #475569;
+                line-height: 1.5;
+                margin-left: 24px;
+            }
+
+            .suggested {
+                color: #10b981;
+                font-weight: 600;
+            }
+
+            .empty-list {
+                padding: 12px;
+                background: #f1f5f9;
+                border-radius: 6px;
+                color: #64748b;
+                text-align: center;
+                font-style: italic;
+            }
+
+            .improvement-suggestions {
+                margin-top: 20px;
+                padding: 15px;
+                background: #f1f5f9;
+                border-radius: 6px;
+            }
+
+            .improvement-suggestions h4 {
+                margin-top: 0;
+                margin-bottom: 10px;
+                color: #334155;
+            }
+
+            h3 {
+                margin-top: 0;
+                margin-bottom: 15px;
+                color: #1e293b;
+            }
+
+            h4 {
+                margin-top: 15px;
+                margin-bottom: 10px;
+                color: #334155;
+            }
+
+            .bullet-feedback, .bullet-suggestion {
+                margin-top: 8px;
+                padding-top: 8px;
+                border-top: 1px dashed #e2e8f0;
+            }
+        </style>
+    `;
+    
+    document.head.insertAdjacentHTML('beforeend', styles);
+}
+
+// Function to handle the display of the match level
+function getMatchLevel(score) {
+    score = parseFloat(score) || 0;
+    if (score >= 85) return "Excellent Match";
+    if (score >= 70) return "Strong Match";
+    if (score >= 55) return "Good Match";
+    if (score >= 40) return "Fair Match";
+    return "Poor Match";
+}
+
+// Function to handle null or undefined fields in the JSON response
+function safeProp(obj, path, defaultValue = '') {
+    const keys = path.split('.');
+    let current = obj;
+    
+    for (const key of keys) {
+        if (current === null || current === undefined || typeof current !== 'object') {
+            return defaultValue;
+        }
+        current = current[key];
+    }
+    
+    return current !== null && current !== undefined ? current : defaultValue;
 }
 
 // When popup opens, inject script into current tab

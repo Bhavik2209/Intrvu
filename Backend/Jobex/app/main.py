@@ -72,13 +72,17 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Update CORS middleware with production settings
+# Update CORS middleware with specific origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "chrome-extension://*",  # For your Chrome extension
+        "http://localhost:3000",  # For local development
+        "https://your-frontend-domain.com"  # Replace with your actual frontend domain
+    ],
     allow_credentials=True,
-    allow_methods=["POST"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_methods=["POST", "GET", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 # Add rate limiting middleware
@@ -86,11 +90,12 @@ app.add_middleware(RateLimitMiddleware)
 
 # Security headers middlewa
 
-@app.post("/")
+@app.post("/api/analyze")
 async def job_analysis(
     resume: UploadFile = File(...),
     jobData: str = Form(...)
 ):
+    logger.info("Received job analysis request")
     try:
         # Validate job data using Pydantic
         try:
@@ -144,6 +149,7 @@ async def job_analysis(
         # Log successful analysis
         logger.info(f"Successful resume analysis for job: {validated_job_data.jobTitle}")
         
+        logger.info("Successfully processed request")
         return {
             "job_context": {
                 "title": validated_job_data.jobTitle or "Job Position",
@@ -159,7 +165,7 @@ async def job_analysis(
     
     except Exception as e:
         # Catch any unexpected errors
-        logger.error(f"Unexpected error in job_analysis: {str(e)}")
+        logger.error(f"Error processing request: {str(e)}")
         raise HTTPException(
             status_code=500, 
             detail="An unexpected error occurred"
@@ -175,3 +181,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             "detail": exc.detail
         }
     )
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "message": "API is running"}

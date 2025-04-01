@@ -1,14 +1,14 @@
 import json
-from dotenv import load_dotenv
-from openai import OpenAI
 import os
-
-# Load environment variables
-load_dotenv()
+from openai import OpenAI
 
 # Initialize the client with API key from environment variable
-api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.environ.get("OPENAI_API_KEY")
+if not api_key:
+    raise ValueError("OPENAI_API_KEY environment variable is not set")
+
 client = OpenAI(api_key=api_key)
+
 # Sections with mandatory and optional indicators
 resume_sections = [
     {"section": "Personal Information", "symbol": "🛑", "mandatory": True},
@@ -412,7 +412,11 @@ def measurable_results(resume_text, job_description):
     prompt = '''Given the resume text: {resume_text}
 
         Analyze whether the resume includes quantifiable metrics and measurable results. Generate a JSON response that includes a measurable results score and detailed analysis. Follow these specifications:
+        Example:
 
+"Increased sales by 30%" : ✅ Yes
+
+"Managed team operations" : ❌ No (Add measurable result)
         1. SCORING SYSTEM:
         - Count the number of instances where the resume includes specific, quantifiable metrics or measurable results
         - Assign points based on the number of measurable results:

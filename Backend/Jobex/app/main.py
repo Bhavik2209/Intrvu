@@ -1,29 +1,94 @@
-from fastapi import FastAPI, UploadFile, File, Form
-from pydantic import BaseModel
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, ValidationError
 from typing import Optional
 import json
+import logging
+from starlette.middleware.base import BaseHTTPMiddleware
+import secrets
+import os
+import time
+
+# Import your custom modules
 from .text_extraction import extract_text_from_pdf
 from .openai import extract_components_openai
-# from .analysis import ResumeAnalyzer
 from .resume_analysis import detail_resume_analysis
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # For development only - restrict this in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+# Enhanced Job Data Model with more validation
+class JobData(BaseModel):
+    jobTitle: Optional[str] = Field(default=None, max_length=100)
+    company: Optional[str] = Field(default=None, max_length=100)
+    description: str = Field(min_length=100, max_length=5000)
+    url: str = Field(max_length=500)
+
+# Rate limiting middleware
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, limit=5, window=60):  # Reduce limit for production
+        super().__init__(app)
+        self.limit = limit
+        self.window = window
+        self.requests = {}
+
+    async def dispatch(self, request: Request, call_next):
+        # Get client IP (consider using X-Forwarded-For for proxy support)
+        client_ip = request.client.host
+        
+        # Track request count for this IP
+        current_time = time.time()
+        if client_ip not in self.requests:
+            self.requests[client_ip] = []
+        
+        # Remove old requests
+        self.requests[client_ip] = [
+            t for t in self.requests[client_ip] 
+            if current_time - t < self.window
+        ]
+        
+        # Check rate limit
+        if len(self.requests[client_ip]) >= self.limit:
+            raise HTTPException(
+                status_code=429, 
+                detail="Too many requests. Please try again later."
+            )
+        
+        # Add current request time
+        self.requests[client_ip].append(current_time)
+        
+        response = await call_next(request)
+        return response
+
+# Create FastAPI app with enhanced security
+app = FastAPI(
+    title="Resume Analysis API",
+    description="Secure API for analyzing resumes against job descriptions",
+    version="1.0.0"
 )
 
-class JobData(BaseModel):
-    jobTitle: Optional[str] = None
-    company: Optional[str] = None
-    description: str
-    url: str
+# Update CORS middleware with production settings
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://your-frontend-domain.com",
+        "http://localhost:3000",  # For local development
+        "chrome-extension://*"    # For your Chrome extension
+    ],
+    allow_credentials=True,
+    allow_methods=["POST"],
+    allow_headers=["Content-Type", "Authorization"],
+)
 
+# Add rate limiting middleware
+app.add_middleware(RateLimitMiddleware)
+
+# Security headers middlewa
 
 @app.post("/")
 async def job_analysis(
@@ -31,143 +96,86 @@ async def job_analysis(
     jobData: str = Form(...)
 ):
     try:
-        job_data_dict = json.loads(jobData)
+        # Validate job data using Pydantic
+        try:
+            job_data_dict = json.loads(jobData)
+            validated_job_data = JobData(**job_data_dict)
+        except (json.JSONDecodeError, ValidationError) as e:
+            logger.error(f"Job data validation error: {str(e)}")
+            raise HTTPException(
+                status_code=400, 
+                detail="Invalid job data format"
+            )
         
-        # Add validation for job description
-        if not job_data_dict.get("description"):
-            return {"error": "Job description is required"}
-            
-        if len(job_data_dict["description"]) < 100:
-            return {"error": "Job description is too short"}
-            
-        # Extract and validate resume text
+        # Validate file type
+        if not resume.filename.lower().endswith('.pdf'):
+            raise HTTPException(
+                status_code=400, 
+                detail="Only PDF files are allowed"
+            )
+        
+        # Extract text directly from file in memory
         resume_text = extract_text_from_pdf(resume.file)
-        if not resume_text or len(resume_text.strip()) < 50:
-            return {"error": "Failed to extract text from PDF or content is too short"}
-            
-        # Log inputs for debugging
-        print(f"Job Description (first 100 chars): {job_data_dict['description'][:100]}")
-        print(f"Resume Text (first 100 chars): {resume_text[:100]}")
         
+        # Validate resume text
+        if not resume_text or len(resume_text.strip()) < 50:
+            raise HTTPException(
+                status_code=400, 
+                detail="Resume content is too short or empty"
+            )
+        
+        # Extract resume components
         components = extract_components_openai(resume_text)
         if not isinstance(components, dict):
-            return {"error": "Invalid resume components structure"}
-            
-        analysis = detail_resume_analysis(components, job_data_dict["description"])
+            raise HTTPException(
+                status_code=500, 
+                detail="Failed to process resume components"
+            )
+        
+        # Perform resume analysis
+        analysis = detail_resume_analysis(
+            components, 
+            validated_job_data.description
+        )
         
         # Validate analysis results
         if not analysis.get("overall_score"):
-            return {"error": "Invalid analysis results"}
-            
+            raise HTTPException(
+                status_code=500, 
+                detail="Unable to complete resume analysis"
+            )
+        
+        # Log successful analysis
+        logger.info(f"Successful resume analysis for job: {validated_job_data.jobTitle}")
+        
         return {
             "job_context": {
-                "title": job_data_dict.get("jobTitle", "Job Position"),
-                "company": job_data_dict.get("company", "Company"),
-                "description_length": len(job_data_dict["description"])
+                "title": validated_job_data.jobTitle or "Job Position",
+                "company": validated_job_data.company or "Company",
+                "description_length": len(validated_job_data.description)
             },
             "analysis": analysis
         }
-        
+    
+    except HTTPException as http_error:
+        # Re-raise HTTP exceptions
+        raise http_error
+    
     except Exception as e:
-        print(f"Error in job_analysis: {str(e)}")
-        return {"error": f"Analysis failed: {str(e)}"}
+        # Catch any unexpected errors
+        logger.error(f"Unexpected error in job_analysis: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail="An unexpected error occurred"
+        )
 
-
-# def format_analysis_results(analysis):
-#     """Format the analysis results for better display in the frontend"""
-    
-#     # Calculate match level based on overall score
-#     match_level = "Excellent Match" if analysis['overall_score'] >= 85 else \
-#                  "Strong Match" if analysis['overall_score'] >= 70 else \
-#                  "Good Match" if analysis['overall_score'] >= 55 else \
-#                  "Fair Match" if analysis['overall_score'] >= 40 else \
-#                  "Poor Match"
-    
-#     # Create a markdown formatted string of the analysis
-#     formatted = {
-#         "summary": {
-#             "match_level": match_level,
-#             "overall_score": analysis['overall_score']
-#         },
-#         "category_scores": {
-#             "keyword_match": {
-#                 "score": analysis['category_scores']['keyword_match'],
-#                 "max": 20,
-#                 "icon": "🎯"
-#             },
-#             "job_experience": {
-#                 "score": analysis['category_scores']['job_experience'],
-#                 "max": 20,
-#                 "icon": "💼"
-#             },
-#             "skills_certifications": {
-#                 "score": analysis['category_scores']['skills_certifications'],
-#                 "max": 15,
-#                 "icon": "📚"
-#             },
-#             "resume_structure": {
-#                 "score": analysis['category_scores']['resume_structure'],
-#                 "max": 15,
-#                 "icon": "📝"
-#             },
-#             "action_words": {
-#                 "score": analysis['category_scores']['action_words'],
-#                 "max": 10,
-#                 "icon": "💪"
-#             },
-#             "measurable_results": {
-#                 "score": analysis['category_scores']['measurable_results'],
-#                 "max": 10,
-#                 "icon": "📊"
-#             },
-#             "bullet_effectiveness": {
-#                 "score": analysis['category_scores']['bullet_effectiveness'],
-#                 "max": 10,
-#                 "icon": "✍️"
-#             }
-#         },
-#         "detailed_analysis": {
-#             "keyword_match": analysis['detailed_analysis']['keyword_match'],
-#             "job_experience": analysis['detailed_analysis']['job_experience'],
-#             "skills_certifications": analysis['detailed_analysis']['skills_certifications'],
-#             "resume_structure": analysis['detailed_analysis']['resume_structure'],
-#             "action_words": analysis['detailed_analysis']['action_words'],
-#             "measurable_results": analysis['detailed_analysis']['measurable_results'],
-#             "bullet_effectiveness": analysis['detailed_analysis']['bullet_effectiveness']
-#         },
-#         "job_requirements": analysis.get('job_requirements', {
-#             "keywords": [],
-#             "experience": "Not specified",
-#             "skills": []
-#         }),
-#         "matches_found": analysis.get('matches_found', {
-#             "keywords": [],
-#             "experience": [],
-#             "metrics": []
-#         }),
-#         "missing_elements": analysis.get('missing_elements', {
-#             "keywords": [],
-#             "experience": [],
-#             "skills": [],
-#             "sections": []
-#         }),
-#         "recommendations": []
-#     }
-
-#     # Process AI-generated recommendations
-#     for rec in analysis['recommendations']:
-#         # Check if recommendation is in the new AI format
-#         if '[' in rec and ']' in rec:
-#             # Already formatted by AI
-#             formatted["recommendations"].append({
-#                 "priority": rec[1:rec.index(']')].lower(),
-#                 "content": rec[rec.index(']')+2:]
-#             })
-#         else:
-#             # Legacy format or fallback recommendation
-#             formatted["recommendations"].append({
-#                 "priority": "medium",
-#                 "content": rec
-#             })
-
-#     return formatted
+# Global exception handler
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": True,
+            "detail": exc.detail
+        }
+    )

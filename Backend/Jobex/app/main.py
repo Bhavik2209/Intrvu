@@ -75,11 +75,7 @@ app = FastAPI(
 # Update CORS middleware with production settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://your-frontend-domain.com",
-        "http://localhost:3000",  # For local development
-        "chrome-extension://*"    # For your Chrome extension
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["POST"],
     allow_headers=["Content-Type", "Authorization"],

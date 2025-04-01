@@ -13,7 +13,6 @@ import time
 from .text_extraction import extract_text_from_pdf
 from .openai import extract_components_openai
 from .resume_analysis import detail_resume_analysis
-from fastapi.middleware.cors import CORSMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -72,23 +71,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Update CORS middleware with specific origins
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "chrome-extension://*",  # For your Chrome extension
-        "http://localhost:3000",  # For local development
-        "https://your-frontend-domain.com"  # Replace with your actual frontend domain
-    ],
-    allow_credentials=True,
-    allow_methods=["POST", "GET", "OPTIONS"],
-    allow_headers=["*"],
-)
-
 # Add rate limiting middleware
 app.add_middleware(RateLimitMiddleware)
 
 # Security headers middlewa
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to Resume Analysis API"}
 
 @app.post("/api/analyze")
 async def job_analysis(
@@ -181,6 +171,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             "detail": exc.detail
         }
     )
+    
 
 @app.get("/api/health")
 async def health_check():

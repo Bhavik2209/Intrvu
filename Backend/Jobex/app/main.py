@@ -76,9 +76,7 @@ app.add_middleware(RateLimitMiddleware)
 
 # Security headers middlewa
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to Resume Analysis API"}
+
 
 @app.post("/api/analyze")
 async def job_analysis(

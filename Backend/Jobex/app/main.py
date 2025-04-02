@@ -4,8 +4,6 @@ from pydantic import BaseModel, Field, ValidationError
 from typing import Optional
 import json
 import logging
-from starlette.middleware.base import BaseHTTPMiddleware
-import secrets
 import os
 import time
 
@@ -30,44 +28,6 @@ class JobData(BaseModel):
     company: Optional[str] = Field(default=None, max_length=100)
     description: str = Field(min_length=100, max_length=5000)
     url: str = Field(max_length=500)
-
-# Rate limiting middleware
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, limit=5, window=60):  # Reduce limit for production
-        super().__init__(app)
-        self.limit = limit
-        self.window = window
-        self.requests = {}
-
-    async def dispatch(self, request: Request, call_next):
-        # Get client IP (consider using X-Forwarded-For for proxy support)
-        client_ip = request.client.host
-        
-        # Track request count for this IP
-        current_time = time.time()
-        if client_ip not in self.requests:
-            self.requests[client_ip] = []
-        
-        # Remove old requests
-        self.requests[client_ip] = [
-            t for t in self.requests[client_ip] 
-            if current_time - t < self.window
-        ]
-        
-        # Check rate limit
-        if len(self.requests[client_ip]) >= self.limit:
-            raise HTTPException(
-                status_code=429, 
-                detail="Too many requests. Please try again later."
-            )
-        
-        # Add current request time
-        self.requests[client_ip].append(current_time)
-        
-        response = await call_next(request)
-        return response
-
-# Security headers middleware
 
 @router.get("/")
 async def root():
@@ -154,17 +114,6 @@ async def job_analysis(
             detail="An unexpected error occurred"
         )
 
-# Global exception handler
-@router.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "error": True,
-            "detail": exc.detail
-        }
-    )
-    
 @router.get("/api/health")
 async def health_check():
     return {"status": "ok", "message": "API is running"}

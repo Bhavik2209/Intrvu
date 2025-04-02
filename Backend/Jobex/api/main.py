@@ -1,10 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 import sys
 import os
 import time
-from fastapi import HTTPException, Request
 
 # Add the parent directory to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -63,6 +63,17 @@ app.add_middleware(
 
 # Add rate limiting middleware
 app.add_middleware(RateLimitMiddleware)
+
+# Global exception handler (moved from router)
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": True,
+            "detail": exc.detail
+        }
+    )
 
 # Import all routes from app.main
 from app.main import router

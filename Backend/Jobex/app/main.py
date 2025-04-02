@@ -67,9 +67,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         return response
 
-# Add rate limiting middleware
-router.add_middleware(RateLimitMiddleware)
-
 # Security headers middleware
 
 @router.get("/")

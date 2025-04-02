@@ -1,49 +1,14 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 import sys
 import os
 import time
+from datetime import datetime, timedelta
+from collections import defaultdict
 
 # Add the parent directory to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Rate limiting middleware
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, limit=5, window=60):  # Reduce limit for production
-        super().__init__(app)
-        self.limit = limit
-        self.window = window
-        self.requests = {}
-
-    async def dispatch(self, request: Request, call_next):
-        # Get client IP (consider using X-Forwarded-For for proxy support)
-        client_ip = request.client.host
-        
-        # Track request count for this IP
-        current_time = time.time()
-        if client_ip not in self.requests:
-            self.requests[client_ip] = []
-        
-        # Remove old requests
-        self.requests[client_ip] = [
-            t for t in self.requests[client_ip] 
-            if current_time - t < self.window
-        ]
-        
-        # Check rate limit
-        if len(self.requests[client_ip]) >= self.limit:
-            raise HTTPException(
-                status_code=429, 
-                detail="Too many requests. Please try again later."
-            )
-        
-        # Add current request time
-        self.requests[client_ip].append(current_time)
-        
-        response = await call_next(request)
-        return response
 
 # Create a new FastAPI instance
 app = FastAPI(
@@ -61,10 +26,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add rate limiting middleware
-app.add_middleware(RateLimitMiddleware)
+# Simple rate limiting using a dictionary
+rate_limit_data = defaultdict(list)
 
-# Global exception handler (moved from router)
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    client_ip = request.client.host
+    now = datetime.now()
+    
+    # Remove old requests
+    rate_limit_data[client_ip] = [
+        req_time for req_time in rate_limit_data[client_ip]
+        if now - req_time < timedelta(minutes=1)
+    ]
+    
+    # Check rate limit (5 requests per minute)
+    if len(rate_limit_data[client_ip]) >= 5:
+        return JSONResponse(
+            status_code=429,
+            content={"error": True, "detail": "Too many requests. Please try again later."}
+        )
+    
+    # Add current request
+    rate_limit_data[client_ip].append(now)
+    
+    # Process the request
+    response = await call_next(request)
+    return response
+
+# Global exception handler
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(

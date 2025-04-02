@@ -2,21 +2,20 @@
   "version": 2,
   "builds": [
       {
-          "src": "Jobex/api/main.py",
+          "src": "Backend/Jobex/api/main.py",
           "use": "@vercel/python"
       }
   ],
   "routes": [
       {
-          "src": "/api/(.*)",
-          "dest": "Jobex/api/main.py"
-      },
-      {
           "src": "/(.*)",
-          "dest": "Jobex/api/main.py"
+          "dest": "Backend/Jobex/api/main.py"
       }
   ],
-  "env": {
-      "PYTHONPATH": "Jobex"
+  "functions": {
+      "Jobex/api/main.py": {
+          "memory": 1024,
+          "maxDuration": 60
+      }
   }
 }

@@ -2,14 +2,14 @@
     "version": 2,
     "builds": [
       {
-        "src": "Backend/Jobex/api/index.py",
+        "src": "Backend/Jobex/api/main.py",
         "use": "@vercel/python"
       }
     ],
     "routes": [
       {
         "src": "/(.*)",
-        "dest": "Backend/Jobex/api/index.py"
+        "dest": "Backend/Jobex/api/main.py"
       }
     ],
     "env": {

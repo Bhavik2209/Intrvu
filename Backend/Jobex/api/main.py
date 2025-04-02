@@ -6,8 +6,12 @@ import os
 # Add the parent directory to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import your app
-from app.main import app
+# Create a new FastAPI instance
+app = FastAPI(
+    title="Resume Analysis API",
+    description="Secure API for analyzing resumes against job descriptions",
+    version="1.0.0"
+)
 
 # Add CORS middleware
 app.add_middleware(
@@ -18,8 +22,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to Resume Analysis API"}
+# Import all routes from app.main
+from app.main import router
+app.include_router(router)
+
 # This is required for Vercel serverless deployment
 handler = app

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 from typing import Optional
@@ -20,6 +20,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Create router instead of app
+router = APIRouter()
 
 # Enhanced Job Data Model with more validation
 class JobData(BaseModel):
@@ -64,21 +67,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         return response
 
-# Create FastAPI app with enhanced security
-app = FastAPI(
-    title="Resume Analysis API",
-    description="Secure API for analyzing resumes against job descriptions",
-    version="1.0.0"
-)
-
 # Add rate limiting middleware
-app.add_middleware(RateLimitMiddleware)
+router.add_middleware(RateLimitMiddleware)
 
-# Security headers middlewa
+# Security headers middleware
 
+@router.get("/")
+async def root():
+    return {"message": "Welcome to Resume Analysis API"}
 
-
-@app.post("/api/analyze")
+@router.post("/api/analyze")
 async def job_analysis(
     resume: UploadFile = File(...),
     jobData: str = Form(...)
@@ -160,7 +158,7 @@ async def job_analysis(
         )
 
 # Global exception handler
-@app.exception_handler(HTTPException)
+@router.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
@@ -170,7 +168,6 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         }
     )
     
-
-@app.get("/api/health")
+@router.get("/api/health")
 async def health_check():
     return {"status": "ok", "message": "API is running"}

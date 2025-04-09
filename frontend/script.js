@@ -1000,10 +1000,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     let uploadedResume = null; // Store the resume file
     const resumeUpload = document.getElementById('resumeUpload');
     const resumeStatus = document.getElementById('resumeStatus');
-    
+    const submitBtn = document.createElement('button');
+    submitBtn.textContent = 'Analyze Job Match';
+    submitBtn.id = 'submit-button';
+    submitBtn.className = 'primary-button';
+    submitBtn.disabled = true; // Initially disable the button
+
     resumeUpload.addEventListener('change', async (event) => {
         const file = event.target.files[0];
-        
+
         if (file) {
             // Check if file is PDF
             if (file.type !== 'application/pdf') {
@@ -1029,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const statusElement = document.createElement('div');
     statusElement.id = 'status';
     descriptionElement.parentNode.insertBefore(statusElement, descriptionElement);
-    
+
     // Create a container for results
     const resultsContainer = document.createElement('div');
     resultsContainer.id = 'resultsContainer';
@@ -1069,11 +1074,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 descriptionElement.appendChild(companyEl);
             }
 
-            if (result.description) {
+            if (result.description && result.description !== 'Description not found. LinkedIn may have updated their page structure.') {
                 const descEl = document.createElement('div');
                 descEl.className = 'description-text';
                 descEl.textContent = result.description;
                 descriptionElement.appendChild(descEl);
+                submitBtn.disabled = false; // Enable button if valid description is found
+            } else {
+                descriptionElement.textContent = 'No job description found. Please open a specific job posting page.';
+                statusElement.textContent = 'Extraction complete with limited results';
+                submitBtn.disabled = true; // Ensure button is disabled if no valid description
             }
 
             if (result.skills) {
@@ -1083,12 +1093,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 descriptionElement.appendChild(skillsEl);
             }
 
-            // Create submit button with loading state
-            const submitBtn = document.createElement('button');
-            submitBtn.textContent = 'Analyze Job Match';
-            submitBtn.id = 'submit-button';
-            submitBtn.className = 'primary-button';
-            
             // Create loading spinner
             const loadingSpinner = document.createElement('div');
             loadingSpinner.className = 'loading-spinner';
@@ -1098,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 dot.className = 'spinner-dot';
                 loadingSpinner.appendChild(dot);
             }
-            
+
             // Add submit button click handler
             submitBtn.onclick = async () => {
                 try {
@@ -1117,7 +1121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     formData.append('resume', uploadedResume);
                     formData.append('jobData', JSON.stringify(result));
 
-                    const response = await fetch('http://127.0.0.1:8000/', {
+                    const response = await fetch('https://intrvu.onrender.com/api/analyze', {
                         method: 'POST',
                         body: formData
                     });
@@ -1127,10 +1131,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     const responseData = await response.json();
-                    
+
                     // Display the results from the backend
                     displayResults(resultsContainer, responseData);
-                    
+
                     // Reset button state
                     submitBtn.textContent = 'Analyze Job Match';
                     submitBtn.disabled = false;
@@ -1138,19 +1142,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 } catch (error) {
                     console.error('Error submitting data:', error);
-                    
+
                     // Display error in results container
                     displayResults(resultsContainer, {
                         error: `Failed to analyze job match: ${error.message}`
                     });
-                    
+
                     // Reset button state
                     submitBtn.textContent = 'Analyze Job Match';
                     submitBtn.disabled = false;
                     loadingSpinner.style.display = 'none';
                 }
             };
-            
+
             descriptionElement.appendChild(submitBtn);
 
             statusElement.textContent = result.description ? 'Job details extracted successfully!' : 'Please open a specific job posting page';

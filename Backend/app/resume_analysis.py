@@ -12,16 +12,16 @@ client = OpenAI(api_key=api_key)
 # Sections with mandatory and optional indicators
 resume_sections = [
     {"section": "Personal Information", "symbol": "🛑", "mandatory": True},
-    {"section": "Website and Social Links", "symbol": "🛑", "mandatory": True},
-    {"section": "Professional Summaries", "symbol": "🛑", "mandatory": True},
+    {"section": "Website/Social Links", "symbol": "🛑", "mandatory": True},
+    {"section": "Professional Summary", "symbol": "🛑", "mandatory": True},
     {"section": "Work Experience", "symbol": "🛑", "mandatory": True},
     {"section": "Education", "symbol": "🛑", "mandatory": True},
-    {"section": "Certification", "symbol": "💡", "mandatory": False},
-    {"section": "Awards and Achievement", "symbol": "💡", "mandatory": False},
+    {"section": "Certifications", "symbol": "💡", "mandatory": False},
+    {"section": "Awards/Achievements", "symbol": "💡", "mandatory": False},
     {"section": "Projects", "symbol": "💡", "mandatory": False},
     {"section": "Skills and Interests", "symbol": "🛑", "mandatory": True},
     {"section": "Volunteering", "symbol": "💡", "mandatory": False},
-    {"section": "Publication", "symbol": "💡", "mandatory": False}
+    {"section": "Publications", "symbol": "💡", "mandatory": False}
 ]
 
 def evaluate_resume_sections(resume_json):
@@ -35,6 +35,7 @@ def evaluate_resume_sections(resume_json):
     Returns:
         dict: Analysis of sections categorized as present or missing, and mandatory or optional.
     """
+    # print(resume_json)
     # Initialize result dictionary
     result = {
         "present": [],
@@ -126,12 +127,12 @@ def keyword_match(resume_text, job_description):
             }}
         }}
 
-        3. DETAILED ANALYSIS REQUIREMENTS:
-        - Extract all relevant skills and keywords from the job description
-        - Compare with skills and keywords in the resume
-        - For "matchedKeywords": List all job-related keywords found in the resume
-        - For "missingKeywords": List all job-related keywords not found in the resume
-        - For "suggestedImprovements": Provide actionable suggestions on how to incorporate missing keywords naturally in relevant resume sections"""
+    3. DETAILED ANALYSIS REQUIREMENTS:
+   - Extract all relevant technical skills and job-specific keywords from the job description
+   - Compare with technical skills and job-specific keywords in the resume
+   - For "matchedKeywords": List all technical and job-related keywords found in the resume
+   - For "missingKeywords": List all technical and job-related keywords not found in the resume
+   - For "suggestedImprovements": Provide actionable suggestions on how to incorporate missing technical keywords naturally in relevant resume sections"""
     
     response = gen_model(prompt)
     
@@ -267,7 +268,7 @@ def resume_structure(resume_text, sections):
 
     prompt = '''Given the resume text: {resume_text}
 
-        These are the sections in the resume: {sections}
+        These are the sections in the resume, please check that which are present and whoch are missing, according to that make json : {sections}
 
         Analyze the structure of the resume for ATS parsing and readability. Generate a JSON response that includes a resume structure score and detailed analysis. Follow these specifications:
 
@@ -301,7 +302,7 @@ def resume_structure(resume_text, sections):
                 "symbol": "✅/❌"
                 },
                 {
-                "section": "LinkedIn URL",
+                "section": "Website/Social Links",
                 "status": "Completed/Missing",
                 "symbol": "✅/❌"
                 },
@@ -411,53 +412,56 @@ def action_words(resume_text, job_description):
 def measurable_results(resume_text, job_description):
     prompt = '''Given the resume text: {resume_text}
 
-        Analyze whether the resume includes quantifiable metrics and measurable results. Generate a JSON response that includes a measurable results score and detailed analysis. Follow these specifications:
-        Example:
+Analyze whether the resume includes quantifiable metrics and measurable results. Generate a JSON response that identifies existing measurable results and provides suggestions for adding more. Follow these specifications:
 
-"Increased sales by 30%" : ✅ Yes
+Example of a MEASURABLE result:  
+"Increased sales by 30%" : ✅ Yes (Contains specific metric)
 
-"Managed team operations" : ❌ No (Add measurable result)
-        1. SCORING SYSTEM:
-        - Count the number of instances where the resume includes specific, quantifiable metrics or measurable results
-        - Assign points based on the number of measurable results:
-            * 5+ measurable results: 10 points (✅)
-            * 3-4 measurable results: 7 points (👍)
-            * 1-2 measurable results: 4 points (⚠️)
-            * 0 measurable results: 0 points (❌)
+Example of a NON-MEASURABLE result:
+"Managed team operations" : ❌ No (Add specific metric, e.g., "Managed team operations for 15-person department, increasing efficiency by 25%")
 
-        2. JSON STRUCTURE:
-        {
-            "score": {
-            "measurableResultsCount": [number],
-            "pointsAwarded": [points],
-            "ratingSymbol": "[emoji]"
-            },
-            "analysis": {
-            "measurableResults": [
-                {
-                "bulletPoint": "[text from resume]",
-                "metric": "[identified metric]",
-                "symbol": "✅"
-                }
-            ],
-            "opportunitiesForMetrics": [
-                {
-                "bulletPoint": "[text from resume]",
-                "suggestion": "[how to add a metric]",
-                "symbol": "❌"
-                }
-            ],
-            "suggestedImprovements": "[summary of recommendations for adding metrics]"
+1. SCORING SYSTEM:
+   - ONLY count instances where the resume explicitly includes specific, quantifiable metrics (percentages, numbers, time periods, dollar amounts)
+   - DO NOT count vague statements or achievements without specific measurements
+   - Assign points based on the number of measurable results:
+      * 5+ measurable results: 10 points (✅)
+      * 3-4 measurable results: 7 points (👍)
+      * 1-2 measurable results: 4 points (⚠️)
+      * 0 measurable results: 0 points (❌)
+
+2. JSON STRUCTURE:
+   {
+      "score": {
+         "measurableResultsCount": [number],
+         "pointsAwarded": [points],
+         "ratingSymbol": "[emoji]"
+      },
+      "analysis": {
+         "measurableResults": [
+            {
+               "bulletPoint": "[exact text from resume]",
+               "metric": "[identified specific metric]",
+               "symbol": "✅"
             }
-        }
+         ],
+         "opportunitiesForMetrics": [
+            {
+               "bulletPoint": "[exact text from resume]",
+               "suggestion": "[how to add a specific metric]",
+               "symbol": "❌"
+            }
+         ],
+         "suggestedImprovements": "[summary of recommendations for adding specific metrics]"
+      }
+   }
 
-        3. DETAILED ANALYSIS REQUIREMENTS:
-        - Review all bullet points and experience descriptions in the resume
-        - Identify statements that include specific numbers, percentages, dollar amounts, or other quantifiable achievements
-        - For "measurableResults": List all instances where the resume includes clear metrics
-        - For "opportunitiesForMetrics": Identify statements that could be enhanced with quantifiable results
-        - For "suggestedImprovements": Provide actionable recommendations for adding metrics to strengthen the resume's impact'''
-    
+3. DETAILED ANALYSIS REQUIREMENTS:
+   - Find any measurable results that already exist in the resume text
+   - Provide specific suggestions for adding measurable results to statements that lack them
+   - For "measurableResults": List only instances where the resume already includes clear, quantifiable metrics
+   - For "opportunitiesForMetrics": Identify statements that need specific quantifiable results and suggest exactly what metrics to add
+   - For "suggestedImprovements": Provide actionable recommendations for adding metrics to strengthen the resume's impact'''
+            
     response = gen_model(prompt)
 
     return response
@@ -490,7 +494,7 @@ def bullet_point_effectiveness(resume_text):
             "analysis": {
             "effectiveBullets": [
                 {
-                "bulletPoint": "[text from resume]",
+                "bulletPoint": "[take text from resume]",
                 "wordCount": [number],
                 "status": "Effective",
                 "strengths": "[what makes it effective]",
@@ -499,7 +503,7 @@ def bullet_point_effectiveness(resume_text):
             ],
             "ineffectiveBullets": [
                 {
-                "bulletPoint": "[text from resume]",
+                "bulletPoint": "[take text from resume]",
                 "wordCount": [number],
                 "status": "Ineffective",
                 "issues": "[identified problems]",
@@ -526,12 +530,12 @@ def detail_resume_analysis(resume_text, job_description):
     # Perform the analysis and store the results
     try:
 
-        sections = evaluate_resume_sections(resume_text)
+        sections_resume = evaluate_resume_sections(resume_text)
 
         keyword_match_json = keyword_match(resume_text, job_description)
         job_experience_json = job_experience(resume_text, job_description)
         skills_certifications_json = skills_certifications(resume_text, job_description)
-        resume_structure_json = resume_structure(resume_text,sections)
+        resume_structure_json = resume_structure(resume_text,sections_resume)
         action_words_json = action_words(resume_text, job_description)
         measurable_results_json = measurable_results(resume_text, job_description)
         bullet_point_effectiveness_json = bullet_point_effectiveness(resume_text)

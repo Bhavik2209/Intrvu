@@ -196,10 +196,9 @@ def job_experience(resume_text, job_description):
     response = gen_model(prompt)
     return response
 
-def skills_certifications(resume_text, job_description):
+def skills_certifications(certifications,skills, job_description):
     prompt = '''Given the job description: {job_description}
-
-        And the resume text: {resume_text}
+        these are the certifications : {certifications} and this is skills {skills} from the resume,
 
         Analyze how well the skills and certifications in the resume match the requirements in the job description. Generate a JSON response that includes a skills and certifications match score and detailed analysis. Follow these specifications:
 
@@ -259,92 +258,88 @@ def skills_certifications(resume_text, job_description):
 
     return response
 
-def resume_structure(resume_text, sections):
+
+def resume_structure(sections):
     try:
-        present_sections = list(resume_text.keys())
-    except json.JSONDecodeError:
-        raise ValueError("resume_text is not a valid JSON string")
+        present_sections = list(sections["present"])
+        missing_sections = list(sections["missing"]["mandatory"])
+    except (KeyError, json.JSONDecodeError) as e:
+        raise ValueError("Invalid sections format or not a valid JSON string")
     
-
-    prompt = '''Given the resume text: {resume_text}
-
-        These are the sections in the resume, please check that which are present and whoch are missing, according to that make json : {sections}
-
-        Analyze the structure of the resume for ATS parsing and readability. Generate a JSON response that includes a resume structure score and detailed analysis. Follow these specifications:
-
-        1. SCORING SYSTEM:
-        - Evaluate the presence and completeness of the following "Must-Have" sections:
-            * Personal Information (contact details)
-            * Work Experience
-            * Education
-            * Skills
-        - Use the provided present_sections list to determine which sections are included in the resume
-        - Assign points based on completion:
-            * All 4 Must-Have sections complete: 15 points (✅)
-            * 3 out of 4 Must-Have sections complete: 12 points (👍)
-            * 2 out of 4 Must-Have sections complete: 8 points (⚠️)
-            * 1 out of 4 Must-Have sections complete: 4 points (🛑)
-            * 0 Must-Have sections complete: 0 points (❌)
-
-        2. JSON STRUCTURE:
-        {
-            "score": {
-            "completedSections": [number of completed Must-Have sections],
-            "totalMustHaveSections": 4,
-            "pointsAwarded": [points],
-            "ratingSymbol": "[emoji]"
-            },
-            "analysis": {
-            "sectionStatus": [
-                {
-                "section": "Personal Information",
-                "status": "Completed/Missing",
-                "symbol": "✅/❌"
-                },
-                {
-                "section": "Website/Social Links",
-                "status": "Completed/Missing",
-                "symbol": "✅/❌"
-                },
-                {
-                "section": "Work Experience",
-                "status": "Completed/Missing",
-                "symbol": "✅/❌"
-                },
-                {
-                "section": "Education",
-                "status": "Completed/Missing",
-                "symbol": "✅/❌"
-                },
-                {
-                "section": "Skills",
-                "status": "Completed/Missing",
-                "symbol": "✅/❌"
-                },
-                {
-                "section": "Certifications",
-                "status": "Completed/Missing",
-                "symbol": "✅/❌"
-                },
-                {
-                "section": "Awards & Achievements",
-                "status": "Completed/Missing",
-                "symbol": "✅/❌"
-                }
-            ],
-            "suggestedImprovements": "[detailed improvement suggestions]"
-            }
+    # Define all must-have sections
+    must_have_sections = ['Personal Information', 'Website/Social Links', 'Professional Summary', 
+                         'Work Experience', 'Education', 'Skills and Interests']
+    
+    # Count completed must-have sections
+    completed_sections = sum(1 for section in must_have_sections if section in present_sections)
+    
+    # Determine score
+    if completed_sections == 6:
+        points = 15
+        rating_symbol = "✅"
+    elif completed_sections == 5:
+        points = 12
+        rating_symbol = "👍"
+    elif completed_sections == 4:
+        points = 8
+        rating_symbol = "⚠️"
+    elif completed_sections == 3:
+        points = 4
+        rating_symbol = "🛑"
+    else:
+        points = 0
+        rating_symbol = "❌"
+    
+    # Create the section status list
+    sections_to_check = [
+        "Personal Information",
+        "Website/Social Links",
+        "Work Experience",
+        "Education",
+        "Skills and Interests",
+        "Certifications",
+        "Awards & Achievements"
+    ]
+    
+    section_status = []
+    for section in sections_to_check:
+        if section in present_sections:
+            status = "Completed"
+            symbol = "✅"
+        else:
+            status = "Missing"
+            symbol = "❌"
+        
+        section_status.append({
+            "section": section,
+            "status": status,
+            "symbol": symbol
+        })
+    
+    # Generate improvement suggestions
+    suggested_improvements = ""
+    if missing_sections:
+        suggested_improvements = "Consider adding these missing sections to improve your resume: "
+        suggested_improvements += ", ".join(missing_sections)
+        suggested_improvements += ". These sections are important for ATS compatibility."
+    else:
+        suggested_improvements = "Your resume has all mandatory sections. Consider enhancing existing sections with more specific details for better ATS compatibility."
+    
+    # Create the final JSON structure
+    result = {
+        "score": {
+            "completedSections": completed_sections,
+            "totalMustHaveSections": 6,
+            "pointsAwarded": points,
+            "ratingSymbol": rating_symbol
+        },
+        "analysis": {
+            "sectionStatus": section_status,
+            "suggestedImprovements": suggested_improvements
         }
-
-        3. DETAILED ANALYSIS REQUIREMENTS:
-        - Use the provided present_sections list to check which sections are included in the resume
-        - Calculate absent_sections = [section for section in resume_sections if section not in present_sections]
-        - For each section, mark as "Completed" if in present_sections list, otherwise mark as "Missing"
-        - For "suggestedImprovements": Provide actionable suggestions on adding missing sections and enhancing existing ones for better ATS compatibility'''
+    }
     
-    response = gen_model(prompt)
-
-    return response
+    return result
 
 def action_words(resume_text, job_description):
     prompt = '''Given the resume text: {resume_text}
@@ -421,7 +416,7 @@ Example of a NON-MEASURABLE result:
 "Managed team operations" : ❌ No (Add specific metric, e.g., "Managed team operations for 15-person department, increasing efficiency by 25%")
 
 1. SCORING SYSTEM:
-   - ONLY count instances where the resume explicitly includes specific, quantifiable metrics (percentages, numbers, time periods, dollar amounts)
+   - ONLY count instances where the resume explicitly includes specific, quantifiable metrics (percentages, numbers, time periods, dollar amounts) **FOUND WITHIN THE PROVIDED {resume_text}**
    - DO NOT count vague statements or achievements without specific measurements
    - Assign points based on the number of measurable results:
       * 5+ measurable results: 10 points (✅)
@@ -456,11 +451,11 @@ Example of a NON-MEASURABLE result:
    }
 
 3. DETAILED ANALYSIS REQUIREMENTS:
-   - Find any measurable results that already exist in the resume text
-   - Provide specific suggestions for adding measurable results to statements that lack them
-   - For "measurableResults": List only instances where the resume already includes clear, quantifiable metrics
-   - For "opportunitiesForMetrics": Identify statements that need specific quantifiable results and suggest exactly what metrics to add
-   - For "suggestedImprovements": Provide actionable recommendations for adding metrics to strengthen the resume's impact'''
+   - Find any measurable results that already exist **IN THE PROVIDED resume_text **
+   - Provide specific suggestions for adding measurable results to statements that lack them **WITHIN THE PROVIDED  resume_text **
+   - For "measurableResults": List only instances where the resume already includes clear, quantifiable metrics **FROM THE PROVIDED  resume_text **
+   - For "opportunitiesForMetrics": Identify statements that need specific quantifiable results and suggest exactly what metrics to add **FROM THE PROVIDED  resume_text **
+   - For "suggestedImprovements": Provide actionable recommendations for adding metrics to strengthen the resume's impact **BASED ON THE ANALYSIS OF THE PROVIDED  resume_text **'''
             
     response = gen_model(prompt)
 
@@ -533,9 +528,9 @@ def detail_resume_analysis(resume_text, job_description):
         sections_resume = evaluate_resume_sections(resume_text)
 
         keyword_match_json = keyword_match(resume_text, job_description)
-        job_experience_json = job_experience(resume_text, job_description)
-        skills_certifications_json = skills_certifications(resume_text, job_description)
-        resume_structure_json = resume_structure(resume_text,sections_resume)
+        job_experience_json = job_experience(resume_text["Work Experience"], job_description)
+        skills_certifications_json = skills_certifications(resume_text["Certifications"],resume_text["Skills and Interests"], job_description)
+        resume_structure_json = resume_structure(sections_resume)
         action_words_json = action_words(resume_text, job_description)
         measurable_results_json = measurable_results(resume_text, job_description)
         bullet_point_effectiveness_json = bullet_point_effectiveness(resume_text)

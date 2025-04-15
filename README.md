@@ -50,8 +50,11 @@ The scoring system evaluates resumes based on several criteria, including keywor
 3. Upload your resume in PDF format.
 4. Click "Analyze Job Match" to receive detailed feedback.
 
+## Privacy Policy
+For more information on how we handle your data, please visit our [Privacy Policy](https://bhavik2209.github.io/Intrvu/). 
+
 ## License
 This project is licensed under the MIT License.
 
 ## Contact
-For questions or support, please contact [getintrvu@gmail.com](mailto:support@intrvu.com). 
+For questions or support, please contact [getintrvu@gmail.com](mailto:support@intrvu.com).

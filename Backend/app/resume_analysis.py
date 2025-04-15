@@ -197,8 +197,8 @@ def job_experience(resume_text, job_description):
     return response
 
 def skills_certifications(certifications,skills, job_description):
-    prompt = '''Given the job description: {job_description}
-        these are the certifications : {certifications} and this is skills {skills} from the resume,
+    prompt = f'''Given the job description: {job_description}
+        these are the certifications : {certifications} and this are skills present in the resume : {skills} ,
 
         Analyze how well the skills and certifications in the resume match the requirements in the job description. Generate a JSON response that includes a skills and certifications match score and detailed analysis. Follow these specifications:
 
@@ -212,38 +212,38 @@ def skills_certifications(certifications,skills, job_description):
             * Below 30% match: 0 points, "Poor" rating (❌)
 
         2. JSON STRUCTURE:
-        {
-            "score": {
+        {{
+            "score": {{
             "matchPercentage": [percentage],
             "pointsAwarded": [points],
             "rating": "[rating text]",
             "ratingSymbol": "[emoji]"
-            },
-            "analysis": {
+            }},
+            "analysis": {{
             "matchedSkills": [
-                {
+                {{
                 "skill": "[skill name]",
                 "status": "Found in Resume",
                 "symbol": "✅"
-                }
+                }}
             ],
             "missingSkills": [
-                {
+                {{
                 "skill": "[skill name]",
                 "status": "Not Found",
                 "symbol": "❌"
-                }
+                }}
             ],
             "certificationMatch": [
-                {
+                {{
                 "certification": "[certification name]",
                 "status": "Found/Not Found",
                 "symbol": "🎓/❌"
-                }
+                }}
             ],
             "suggestedImprovements": "[detailed improvement suggestions]"
-            }
-        }
+            }}
+        }}
 
         3. DETAILED ANALYSIS REQUIREMENTS:
         - Extract all required technical skills, soft skills, and certifications from the job description
@@ -342,7 +342,7 @@ def resume_structure(sections):
     return result
 
 def action_words(resume_text, job_description):
-    prompt = '''Given the resume text: {resume_text}
+    prompt = f'''Given the resume text: {resume_text}
 
         Analyze the use of strong, impactful action verbs in the resume. Generate a JSON response that includes an action words usage score and detailed analysis. Follow these specifications:
 
@@ -356,41 +356,41 @@ def action_words(resume_text, job_description):
             * Below 40% strong action words: 2 points (🛑)
 
         2. JSON STRUCTURE:
-        {
-            "score": {
+        {{
+            "score": {{
             "actionVerbPercentage": [percentage],
             "pointsAwarded": [points],
             "ratingSymbol": "[emoji]"
-            },
-            "analysis": {
+            }},
+            "analysis": {{
             "strongActionVerbs": [
-                {
+                {{
                 "bulletPoint": "[text from resume]",
                 "status": "Strong Action Word",
                 "actionVerb": "[identified action verb]",
                 "symbol": "✅"
-                }
+                }}
             ],
             "weakActionVerbs": [
-                {
+                {{
                 "bulletPoint": "[text from resume]",
                 "status": "Weak Action Word",
                 "actionVerb": "[identified weak verb]",
                 "suggestedReplacement": "[stronger alternative]",
                 "symbol": "⚠️"
-                }
+                }}
             ],
             "missingActionVerbs": [
-                {
+                {{
                 "bulletPoint": "[text from resume]",
                 "status": "No Action Word",
                 "suggestedReplacement": "[suggested rewrite with action verb]",
                 "symbol": "❌"
-                }
+                }}
             ],
             "suggestedImprovements": "[summary of recommended changes]"
-            }
-        }
+            }}
+        }}
 
         3. DETAILED ANALYSIS REQUIREMENTS:
         - Identify all bullet points and experience descriptions in the resume
@@ -405,7 +405,7 @@ def action_words(resume_text, job_description):
     return response
 
 def measurable_results(resume_text, job_description):
-    prompt = '''Given the resume text: {resume_text}
+    prompt = f'''Given the resume text: {resume_text}
 
 Analyze whether the resume includes quantifiable metrics and measurable results. Generate a JSON response that identifies existing measurable results and provides suggestions for adding more. Follow these specifications:
 
@@ -425,30 +425,30 @@ Example of a NON-MEASURABLE result:
       * 0 measurable results: 0 points (❌)
 
 2. JSON STRUCTURE:
-   {
-      "score": {
+   {{
+      "score": {{
          "measurableResultsCount": [number],
          "pointsAwarded": [points],
          "ratingSymbol": "[emoji]"
-      },
-      "analysis": {
+      }},
+      "analysis": {{
          "measurableResults": [
-            {
+            {{
                "bulletPoint": "[exact text from resume]",
                "metric": "[identified specific metric]",
                "symbol": "✅"
-            }
+            }}
          ],
          "opportunitiesForMetrics": [
-            {
+            {{
                "bulletPoint": "[exact text from resume]",
                "suggestion": "[how to add a specific metric]",
                "symbol": "❌"
-            }
+            }}
          ],
          "suggestedImprovements": "[summary of recommendations for adding specific metrics]"
-      }
-   }
+      }}
+   }}
 
 3. DETAILED ANALYSIS REQUIREMENTS:
    - Find any measurable results that already exist **IN THE PROVIDED resume_text **
@@ -462,7 +462,7 @@ Example of a NON-MEASURABLE result:
     return response
 
 def bullet_point_effectiveness(resume_text):
-    prompt = '''Given the resume text: {resume_text}
+    prompt = f'''Given the resume text: {resume_text}
 
         Analyze the effectiveness of bullet points in the resume: , evaluating their conciseness and impact. Generate a JSON response that includes a bullet point effectiveness score and detailed analysis. Follow these specifications:
 
@@ -480,35 +480,35 @@ def bullet_point_effectiveness(resume_text):
             * Below 50% bullets effective: 2 points (🛑)
 
         2. JSON STRUCTURE:
-        {
-            "score": {
+        {{
+            "score": {{
             "effectiveBulletPercentage": [percentage],
             "pointsAwarded": [points],
             "ratingSymbol": "[emoji]"
-            },
-            "analysis": {
+            }},
+            "analysis": {{
             "effectiveBullets": [
-                {
+                {{
                 "bulletPoint": "[take text from resume]",
                 "wordCount": [number],
                 "status": "Effective",
                 "strengths": "[what makes it effective]",
                 "symbol": "✅"
-                }
+                }}
             ],
             "ineffectiveBullets": [
-                {
+                {{
                 "bulletPoint": "[take text from resume]",
                 "wordCount": [number],
                 "status": "Ineffective",
                 "issues": "[identified problems]",
                 "suggestedRevision": "[improved version]",
                 "symbol": "❌"
-                }
+                }}
             ],
             "suggestedImprovements": "[summary of how to improve bullet points]"
-            }
-        }
+            }}
+        }}
 
         3. DETAILED ANALYSIS REQUIREMENTS:
         - Identify all bullet points in the resume

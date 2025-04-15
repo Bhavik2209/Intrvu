@@ -1000,11 +1000,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     let uploadedResume = null; // Store the resume file
     const resumeUpload = document.getElementById('resumeUpload');
     const resumeStatus = document.getElementById('resumeStatus');
-    const submitBtn = document.createElement('button');
-    submitBtn.textContent = 'Analyze Job Match';
-    submitBtn.id = 'submit-button';
-    submitBtn.className = 'primary-button';
-    submitBtn.disabled = true; // Initially disable the button
+    const submitBtn = document.getElementById('submit-button');
+    const progressBar = document.getElementById('progressBar');
+    const warningMessage = document.getElementById('warningMessage');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const analysisSection = document.getElementById('analysisSection');
+
+    // Function to update button state
+    function updateButtonState() {
+        // Button should be disabled when:
+        // - No resume is uploaded
+        // - Request is in progress
+        submitBtn.disabled = !uploadedResume || progressBar.style.display === 'block';
+    }
 
     resumeUpload.addEventListener('change', async (event) => {
         const file = event.target.files[0];
@@ -1014,6 +1022,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (file.type !== 'application/pdf') {
                 resumeStatus.textContent = 'Please upload a PDF file';
                 resumeStatus.className = 'error';
+                uploadedResume = null;
+                updateButtonState();
                 return;
             }
 
@@ -1021,150 +1031,107 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (file.size > 5 * 1024 * 1024) {
                 resumeStatus.textContent = 'File size should be less than 5MB';
                 resumeStatus.className = 'error';
+                uploadedResume = null;
+                updateButtonState();
                 return;
             }
 
             uploadedResume = file; // Store the file for later use
             resumeStatus.textContent = 'Resume ready to submit';
             resumeStatus.className = 'success';
+            updateButtonState();
+        } else {
+            resumeStatus.textContent = 'No file selected';
+            resumeStatus.className = '';
+            uploadedResume = null;
+            updateButtonState();
         }
     });
 
-    const descriptionElement = document.getElementById('jobDescription');
-    const statusElement = document.createElement('div');
-    statusElement.id = 'status';
-    descriptionElement.parentNode.insertBefore(statusElement, descriptionElement);
-
-    // Create a container for results
-    const resultsContainer = document.createElement('div');
-    resultsContainer.id = 'resultsContainer';
-    document.body.appendChild(resultsContainer);
-
-    try {
-        statusElement.textContent = 'Extracting job details...';
-
-        // Get the current active tab
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-        // Add a small delay to ensure page is loaded
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Inject script into the page
-        const [{ result }] = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            function: extractJobDescription
-        });
-
-        // Display the result
-        if (result && typeof result === 'object') {
-            // Clear the container first
-            descriptionElement.innerHTML = '';
-
-            // Create structured display
-            if (result.jobTitle) {
-                const titleEl = document.createElement('h2');
-                titleEl.textContent = result.jobTitle;
-                descriptionElement.appendChild(titleEl);
-            }
-
-            if (result.company) {
-                const companyEl = document.createElement('h3');
-                companyEl.textContent = result.company;
-                if (result.location) companyEl.textContent += ` • ${result.location}`;
-                descriptionElement.appendChild(companyEl);
-            }
-
-            if (result.description && result.description !== 'Description not found. LinkedIn may have updated their page structure.') {
-                const descEl = document.createElement('div');
-                descEl.className = 'description-text';
-                descEl.textContent = result.description;
-                descriptionElement.appendChild(descEl);
-                submitBtn.disabled = false; // Enable button if valid description is found
-            } else {
-                descriptionElement.textContent = 'No job description found. Please open a specific job posting page.';
-                statusElement.textContent = 'Extraction complete with limited results';
-                submitBtn.disabled = true; // Ensure button is disabled if no valid description
-            }
-
-            if (result.skills) {
-                const skillsEl = document.createElement('div');
-                skillsEl.className = 'skills-section';
-                skillsEl.innerHTML = `<strong>Skills:</strong> ${result.skills}`;
-                descriptionElement.appendChild(skillsEl);
-            }
-
-            // Create loading spinner
-            const loadingSpinner = document.createElement('div');
-            loadingSpinner.className = 'loading-spinner';
-            loadingSpinner.style.display = 'none';
-            for (let i = 0; i < 3; i++) {
-                const dot = document.createElement('div');
-                dot.className = 'spinner-dot';
-                loadingSpinner.appendChild(dot);
-            }
-
-            // Add submit button click handler
-            submitBtn.onclick = async () => {
-                try {
-                    if (!uploadedResume) {
-                        alert('Please upload a resume first');
-                        return;
-                    }
-
-                    // Show loading state
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'Analyzing...';
-                    loadingSpinner.style.display = 'inline-block';
-                    submitBtn.appendChild(loadingSpinner);
-
-                    const formData = new FormData();
-                    formData.append('resume', uploadedResume);
-                    formData.append('jobData', JSON.stringify(result));
-
-                    const response = await fetch('http://127.0.0.1:8000/api/analyze', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`Server responded with status: ${response.status}`);
-                    }
-
-                    const responseData = await response.json();
-
-                    // Display the results from the backend
-                    displayResults(resultsContainer, responseData);
-
-                    // Reset button state
-                    submitBtn.textContent = 'Analyze Job Match';
-                    submitBtn.disabled = false;
-                    loadingSpinner.style.display = 'none';
-
-                } catch (error) {
-                    console.error('Error submitting data:', error);
-
-                    // Display error in results container
-                    displayResults(resultsContainer, {
-                        error: `Failed to analyze job match: ${error.message}`
-                    });
-
-                    // Reset button state
-                    submitBtn.textContent = 'Analyze Job Match';
-                    submitBtn.disabled = false;
-                    loadingSpinner.style.display = 'none';
-                }
-            };
-
-            descriptionElement.appendChild(submitBtn);
-
-            statusElement.textContent = result.description ? 'Job details extracted successfully!' : 'Please open a specific job posting page';
-        } else {
-            descriptionElement.textContent = 'No job description found. Please open a specific job posting page.';
-            statusElement.textContent = 'Extraction complete with limited results';
-        }
-    } catch (error) {
-        descriptionElement.textContent = 'Error: Could not extract job description';
-        statusElement.textContent = 'Extraction failed';
-        console.error(error);
+    // Create loading spinner
+    const loadingSpinner = document.createElement('div');
+    loadingSpinner.className = 'loading-spinner';
+    loadingSpinner.style.display = 'none';
+    for (let i = 0; i < 3; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'spinner-dot';
+        loadingSpinner.appendChild(dot);
     }
+
+    // Add submit button click handler
+    submitBtn.onclick = async () => {
+        try {
+            if (!uploadedResume) {
+                alert('Please upload a resume first');
+                return;
+            }
+
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Analyzing...';
+            loadingSpinner.style.display = 'inline-block';
+            submitBtn.appendChild(loadingSpinner);
+            
+            // Show progress bar and warning
+            progressBar.style.display = 'block';
+            warningMessage.style.display = 'block';
+
+            // Get the current active tab
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+            // Add a small delay to ensure page is loaded
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Inject script into the page to extract job description
+            const [{ result }] = await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                function: extractJobDescription
+            });
+
+            const formData = new FormData();
+            formData.append('resume', uploadedResume);
+            formData.append('jobData', JSON.stringify(result));
+
+            const response = await fetch('http://127.0.0.1:8000/api/analyze', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+
+            const responseData = await response.json();
+
+            // Display the results from the backend
+            analysisSection.style.display = 'block';
+            displayResults(resultsContainer, responseData);
+
+            // Reset button state
+            submitBtn.textContent = 'Analyze Job Match';
+            loadingSpinner.style.display = 'none';
+            progressBar.style.display = 'none';
+            warningMessage.style.display = 'none';
+            updateButtonState();
+
+        } catch (error) {
+            console.error('Error submitting data:', error);
+
+            // Display error in results container
+            analysisSection.style.display = 'block';
+            displayResults(resultsContainer, {
+                error: `Failed to analyze job match: ${error.message}`
+            });
+
+            // Reset button state
+            submitBtn.textContent = 'Analyze Job Match';
+            loadingSpinner.style.display = 'none';
+            progressBar.style.display = 'none';
+            warningMessage.style.display = 'none';
+            updateButtonState();
+        }
+    };
+
+    // Initial button state
+    updateButtonState();
 });

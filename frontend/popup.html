@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="viewport" content="width=800">
     <link rel="stylesheet" href="style.css">
     <title>Job Description Extractor</title>
 </head>
@@ -40,11 +39,14 @@
             </div>
 
             <div class="right-panel">
-                <div id="jobDescription">
-                    <div class="loading-message">
-                        <div class="loading-spinner"></div>
-                        <div>Extracting job description...</div>
-                    </div>
+                <div id="progressBar" class="progress-bar" style="display: none;">
+                    <div class="progress-bar-fill"></div>
+                </div>
+                <div id="warningMessage" class="warning-message" style="display: none;">
+                    Please do not change tabs or navigate away while the extension is processing. Doing so may cause the extension to close and lose your data.
+                </div>
+                <div class="submit-section">
+                    <button id="submit-button" class="primary-button" disabled>Analyze Job Match</button>
                 </div>
             </div>
         </div>

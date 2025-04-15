@@ -1121,7 +1121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     formData.append('resume', uploadedResume);
                     formData.append('jobData', JSON.stringify(result));
 
-                    const response = await fetch('https://intrvu.onrender.com/api/analyze', {
+                    const response = await fetch('http://127.0.0.1:8000/api/analyze', {
                         method: 'POST',
                         body: formData
                     });

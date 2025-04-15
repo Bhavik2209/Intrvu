@@ -1,5 +1,5 @@
 {
-    "name": "Job Description Extension",
+    "name": "Intrvu - Resume Fit Analyzer",
     "version": "0.0.1",
     "manifest_version": 3,
     "action": {
@@ -9,11 +9,10 @@
     },
     "permissions": [
         "activeTab",
-        "scripting",
-        "storage"
+        "scripting"   
     ],
     "host_permissions": [
-        "<all_urls>",
+        "https://www.linkedin.com/jobs/*",
         "http://localhost:8000/*"
     ]
 }

@@ -236,7 +236,7 @@ def skills_certifications(certifications,skills, job_description):
             ],
             "certificationMatch": [
                 {{
-                "certification": "[certification name]",
+                "certification": "[certification name that should be there and that is there (present and not present both)]",
                 "status": "Found/Not Found",
                 "symbol": "🎓/❌"
                 }}

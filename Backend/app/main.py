@@ -26,7 +26,7 @@ router = APIRouter()
 class JobData(BaseModel):
     jobTitle: Optional[str] = Field(default=None, max_length=100)
     company: Optional[str] = Field(default=None, max_length=100)
-    description: str = Field(min_length=100, max_length=5000)
+    description: str = Field(min_length=100)
     url: str = Field(max_length=500)
 
 @router.get("/")
@@ -81,7 +81,8 @@ async def job_analysis(
             components, 
             validated_job_data.description
         )
-        
+        # with open("testing.json", "w") as f:
+        #     json.dump(components, f, indent=4)
         # Validate analysis results
         if not analysis.get("overall_score"):
             raise HTTPException(

@@ -721,7 +721,7 @@ input, button {
     width: 0%;
     background-color: #3449bd;
     border-radius: 5px;
-    animation: progress-animation 2s infinite ease-in-out;
+    transition: width 0.3s ease-out;
 }
 
 @keyframes progress-animation {

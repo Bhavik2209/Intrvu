@@ -1060,21 +1060,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Add submit button click handler
     submitBtn.onclick = async () => {
+        let progressInterval = null;
         try {
             if (!uploadedResume) {
                 alert('Please upload a resume first');
                 return;
             }
 
-            // Show loading state
+            // Show loading state & start progress bar
             submitBtn.disabled = true;
             submitBtn.textContent = 'Analyzing...';
             loadingSpinner.style.display = 'inline-block';
             submitBtn.appendChild(loadingSpinner);
             
-            // Show progress bar and warning
+            const progressBarFill = progressBar.querySelector('.progress-bar-fill');
             progressBar.style.display = 'block';
+            progressBarFill.style.width = '0%'; // Start at 0%
             warningMessage.style.display = 'block';
+
+            // Simulate progress increase
+            let currentProgress = 0;
+            progressInterval = setInterval(() => {
+                currentProgress += Math.random() * 10; // Increment progress
+                if (currentProgress < 95) {
+                    progressBarFill.style.width = `${currentProgress}%`;
+                } else {
+                    // Don't exceed 95% until the actual response comes
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                    progressBarFill.style.width = '95%';
+                }
+            }, 300); // Update every 300ms
 
             // Get the current active tab
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -1097,9 +1113,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 body: formData
             });
 
+            // Clear interval if it's still running
+            if (progressInterval) clearInterval(progressInterval);
+            progressInterval = null;
+
             if (!response.ok) {
                 throw new Error(`Server responded with status: ${response.status}`);
             }
+
+            // Complete progress bar
+            progressBarFill.style.width = '100%';
 
             const responseData = await response.json();
 
@@ -1107,14 +1130,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             analysisSection.style.display = 'block';
             displayResults(resultsContainer, responseData);
 
-            // Reset button state
+            // Reset button state and hide progress/warning after a short delay
             submitBtn.textContent = 'Analyze Job Match';
             loadingSpinner.style.display = 'none';
-            progressBar.style.display = 'none';
-            warningMessage.style.display = 'none';
+            setTimeout(() => {
+                 progressBar.style.display = 'none';
+                 warningMessage.style.display = 'none';
+                 progressBarFill.style.width = '0%'; // Reset for next time
+            }, 500); // Hide after 0.5 seconds
             updateButtonState();
 
         } catch (error) {
+            if (progressInterval) clearInterval(progressInterval); // Clear interval on error too
             console.error('Error submitting data:', error);
 
             // Display error in results container
@@ -1123,11 +1150,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 error: `Failed to analyze job match: ${error.message}`
             });
 
-            // Reset button state
+            // Reset button state and hide progress/warning
             submitBtn.textContent = 'Analyze Job Match';
             loadingSpinner.style.display = 'none';
             progressBar.style.display = 'none';
             warningMessage.style.display = 'none';
+            const progressBarFillOnError = progressBar.querySelector('.progress-bar-fill');
+            if (progressBarFillOnError) progressBarFillOnError.style.width = '0%'; // Reset on error
             updateButtonState();
         }
     };

@@ -146,8 +146,8 @@ def keyword_match(resume_text, job_description):
 def job_experience(resume_text, job_description):
     prompt = f"""Given the job description: {job_description}
 
-        And the resume text: {resume_text}
-
+        And the job experience from the resume: {resume_text}
+        NOTE : if there is no job experience give the suggestions about what kind of job experience should be there in the resume according to the job desciption, 
         Analyze how well the work experience in the resume aligns with the job responsibilities. Generate a JSON response that includes a job experience alignment score and detailed analysis. Follow these specifications:
 
         1. SCORING SYSTEM:
@@ -201,7 +201,7 @@ def skills_certifications(certifications,skills, job_description):
         these are the certifications : {certifications} and this are skills present in the resume : {skills} ,
 
         Analyze how well the skills and certifications in the resume match the requirements in the job description. Generate a JSON response that includes a skills and certifications match score and detailed analysis. Follow these specifications:
-
+        NOTE : in the missing skills section, show those skills which are mentioned in the job desciption but not present in the resume skill, 
         1. SCORING SYSTEM:
         - Calculate the percentage of required skills and certifications in the job description that are present in the resume
         - Assign points and ratings based on match percentage:
@@ -229,7 +229,7 @@ def skills_certifications(certifications,skills, job_description):
             ],
             "missingSkills": [
                 {{
-                "skill": "[skill name]",
+                "skill": "[skill name which are not present in resume skills]",
                 "status": "Not Found",
                 "symbol": "❌"
                 }}

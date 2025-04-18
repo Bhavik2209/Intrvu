@@ -1005,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const warningMessage = document.getElementById('warningMessage');
     const resultsContainer = document.getElementById('resultsContainer');
     const analysisSection = document.getElementById('analysisSection');
-
+    const progressBarFill = progressBar.querySelector('.progress-bar-fill'); 
     // Function to update button state
     function updateButtonState() {
         // Button should be disabled when:
@@ -1069,26 +1069,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Show loading state & start progress bar
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Analyzing...';
-            loadingSpinner.style.display = 'inline-block';
-            submitBtn.appendChild(loadingSpinner);
-            
-            const progressBarFill = progressBar.querySelector('.progress-bar-fill');
+            submitBtn.innerHTML = 'Analyzing... <div class="loading-spinner"></div>'; // Add spinner
             progressBar.style.display = 'block';
-            progressBarFill.style.width = '0%'; // Start at 0%
             warningMessage.style.display = 'block';
 
-            // Simulate progress increase
+            // Start progress bar filling
             let currentProgress = 0;
+            progressBarFill.style.width = '0%'; // Start at 0%
             progressInterval = setInterval(() => {
-                currentProgress += Math.random() * 10; // Increment progress
-                if (currentProgress < 95) {
+                currentProgress += 10; // Increment progress
+                if (currentProgress <= 90) {
                     progressBarFill.style.width = `${currentProgress}%`;
-                } else {
-                    // Don't exceed 95% until the actual response comes
-                    clearInterval(progressInterval);
-                    progressInterval = null;
-                    progressBarFill.style.width = '95%';
                 }
             }, 300); // Update every 300ms
 
@@ -1104,6 +1095,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 function: extractJobDescription
             });
 
+            // Check if the description is valid
+            if (!result.description || result.description.length < 100) {
+                clearInterval(progressInterval); // Clear progress interval
+                progressBar.style.display = 'none'; // Hide progress bar
+                warningMessage.style.display = 'none'; // Hide warning message
+                submitBtn.innerHTML = 'Analyze Job Match'; // Reset button text
+                submitBtn.disabled = false; // Enable button
+                alert('No valid job description found. Please open a specific job posting.'); // User-friendly message
+                return; // Prevent sending the request
+            }
+
             const formData = new FormData();
             formData.append('resume', uploadedResume);
             formData.append('jobData', JSON.stringify(result));
@@ -1117,12 +1119,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (progressInterval) clearInterval(progressInterval);
             progressInterval = null;
 
+            // Complete progress bar
+            progressBarFill.style.width = '100%';
+
             if (!response.ok) {
                 throw new Error(`Server responded with status: ${response.status}`);
             }
-
-            // Complete progress bar
-            progressBarFill.style.width = '100%';
 
             const responseData = await response.json();
 
@@ -1131,12 +1133,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             displayResults(resultsContainer, responseData);
 
             // Reset button state and hide progress/warning after a short delay
-            submitBtn.textContent = 'Analyze Job Match';
-            loadingSpinner.style.display = 'none';
             setTimeout(() => {
-                 progressBar.style.display = 'none';
-                 warningMessage.style.display = 'none';
-                 progressBarFill.style.width = '0%'; // Reset for next time
+                submitBtn.innerHTML = 'Analyze Job Match'; // Reset button text
+                submitBtn.disabled = false;
+                progressBar.style.display = 'none';
+                warningMessage.style.display = 'none';
+                progressBarFill.style.width = '0%'; // Reset for next time
             }, 500); // Hide after 0.5 seconds
             updateButtonState();
 
@@ -1151,8 +1153,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             // Reset button state and hide progress/warning
-            submitBtn.textContent = 'Analyze Job Match';
-            loadingSpinner.style.display = 'none';
+            submitBtn.innerHTML = 'Analyze Job Match'; // Reset button text
+            submitBtn.disabled = false;
             progressBar.style.display = 'none';
             warningMessage.style.display = 'none';
             const progressBarFillOnError = progressBar.querySelector('.progress-bar-fill');

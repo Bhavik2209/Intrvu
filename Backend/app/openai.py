@@ -98,7 +98,7 @@ def extract_components_openai(resume_text: str) -> Dict[str, Any]:
 10. Volunteering: Include organization names, roles, dates, and key contributions
 11. Publications: Include titles, publication venues, dates, and co-authors if applicable
 
-Return the information in valid JSON format and if any section is missing so please do not include that empty section in the json.
+Return the information in valid JSON format and if any section is missing so please add that section with empty list like [].
 
 Resume text: {resume_text}
 

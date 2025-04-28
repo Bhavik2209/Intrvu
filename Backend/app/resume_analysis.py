@@ -68,12 +68,12 @@ def evaluate_resume_sections(resume_json):
 def gen_model(prompt):
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4.1",
             messages=[
                 {"role": "system", "content": "You are a resume analysis specialist that extracts structured information from resumes and returns it as valid JSON. Only respond with valid JSON, no explanations or extra text."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.7,  # Increase temperature for more variation
+            temperature=0.3,  # Increase temperature for more variation
             max_tokens=4000
         )
         

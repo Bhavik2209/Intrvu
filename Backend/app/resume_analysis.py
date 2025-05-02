@@ -104,13 +104,14 @@ def keyword_match(resume_text, job_description):
         Analyze how well the resume matches the job description. Generate a JSON response that includes a skills match score and detailed analysis. Follow these specifications:
 
         1. SCORING SYSTEM:
-        - Calculate the percentage of job-related keywords found in the resume
-        - Assign points and ratings based on match percentage:
-            * 90%+ match: 20 points, "Excellent" rating (✅)
-            * 70-89% match: 15 points, "Good" rating (👍)
-            * 50-69% match: 10 points, "Fair" rating (⚠️)
-            * 30-49% match: 5 points, "Needs Improvement" rating (🛑)
-            * Below 30% match: 0 points, "Poor" rating (❌)
+   - First identify and extract only relevant technical skills, job-specific qualifications, tools, methodologies, and industry-specific terminology from the job description
+   - Calculate the percentage of these meaningful job-related keywords found in the resume
+   - Assign points and ratings based on match percentage:
+       * 90%+ match: 20 points, "Excellent" rating (✅)
+       * 70-89% match: 15 points, "Good" rating (👍)
+       * 50-69% match: 10 points, "Fair" rating (⚠️)
+       * 30-49% match: 5 points, "Needs Improvement" rating (🛑)
+       * Below 30% match: 0 points, "Poor" rating (❌)
 
         2. JSON STRUCTURE:
         {{
@@ -128,11 +129,19 @@ def keyword_match(resume_text, job_description):
         }}
 
     3. DETAILED ANALYSIS REQUIREMENTS:
-   - Extract all relevant technical skills and job-specific keywords from the job description
-   - Compare with technical skills and job-specific keywords in the resume
-   - For "matchedKeywords": List all technical and job-related keywords found in the resume
-   - For "missingKeywords": List all technical and job-related keywords not found in the resume
-   - For "suggestedImprovements": Provide actionable suggestions on how to incorporate missing technical keywords naturally in relevant resume sections"""
+   - Extract ONLY relevant technical skills, qualifications, and job-specific keywords from the job description:
+     * Technical skills (programming languages, software, tools, platforms)
+     * Domain knowledge (industry-specific terminology)
+     * Methodologies (project management frameworks, development approaches)
+     * Specialized certifications or qualifications
+     * Required years of experience in specific areas
+   - Ignore common words, general job functions, and non-specific terminology
+   - For technical jobs: focus on technical skills, tools, programming languages, frameworks, methodologies
+   - For non-technical jobs: focus on domain expertise, methodologies, certifications, specialized knowledge
+   - For "matchedKeywords": List only significant technical and job-related keywords found in the resume
+   - For "missingKeywords": List only significant technical and job-related keywords not found in the resume
+   - For "suggestedImprovements": Provide specific, actionable suggestions on how to incorporate missing keywords naturally into relevant resume sections based on the candidate's actual experience
+"""
     
     response = gen_model(prompt)
     
@@ -197,21 +206,30 @@ def job_experience(resume_text, job_description):
     return response
 
 def skills_certifications(certifications,skills, job_description):
-    prompt = f'''Given the job description: {job_description}
-        these are the certifications : {certifications} and this are skills present in the resume : {skills} ,
+    prompt = f'''Given the job description: {job_description}, these are the certifications: {certifications} and these are skills present in the resume: {skills}.
 
-        Analyze how well the skills and certifications in the resume match the requirements in the job description. Generate a JSON response that includes a skills and certifications match score and detailed analysis. Follow these specifications:
-        NOTE : in the missing skills section, show those skills which are mentioned in the job desciption but not present in the resume skill, 
-        1. SCORING SYSTEM:
-        - Calculate the percentage of required skills and certifications in the job description that are present in the resume
-        - Assign points and ratings based on match percentage:
-            * 90%+ match: 15 points, "Excellent" rating (✅)
-            * 70-89% match: 12 points, "Good" rating (👍)
-            * 50-69% match: 8 points, "Fair" rating (⚠️)
-            * 30-49% match: 4 points, "Needs Improvement" rating (🛑)
-            * Below 30% match: 0 points, "Poor" rating (❌)
+Analyze how well the skills and certifications in the resume match the requirements in the job description. Generate a JSON response that includes a skills and certifications match score and detailed analysis. Follow these specifications:
 
-        2. JSON STRUCTURE:
+NOTE: In the missing skills section, ONLY include actual skills/qualifications mentioned in the job description but not present in the resume skills list.
+
+1. SKILLS EXTRACTION PROCESS:
+   - First, carefully extract only legitimate technical skills, tools, technologies, methodologies, and relevant qualifications from the job description
+   - Focus on keywords that represent actual competencies employers seek (programming languages, tools, methodologies, domain knowledge)
+   - Do NOT include random phrases, job responsibilities, or generic terms as skills
+   - For technical positions: Focus on specific technologies, programming languages, frameworks, and technical methodologies
+   - For non-technical positions: Focus on relevant domain-specific skills, methodologies, and tools
+
+2. SCORING SYSTEM:
+   - Calculate the percentage of required skills and certifications in the job description that are present in the resume
+   - Check for semantic matches (e.g., "Python programming" in job description matches "Python" in resume)
+   - Assign points and ratings based on match percentage:
+      * 90%+ match: 15 points, "Excellent" rating (✅)
+      * 70-89% match: 12 points, "Good" rating (👍)
+      * 50-69% match: 8 points, "Fair" rating (⚠️)
+      * 30-49% match: 4 points, "Needs Improvement" rating (🛑)
+      * Below 30% match: 0 points, "Poor" rating (❌)
+
+        3. JSON STRUCTURE:
         {{
             "score": {{
             "matchPercentage": [percentage],
@@ -245,13 +263,14 @@ def skills_certifications(certifications,skills, job_description):
             }}
         }}
 
-        3. DETAILED ANALYSIS REQUIREMENTS:
-        - Extract all required technical skills, soft skills, and certifications from the job description
-        - Compare with skills and certifications listed in the resume
-        - For "matchedSkills": List all job-related skills present in the resume
-        - For "missingSkills": Highlight skills required in the job description but missing from the resume
-        - For "certificationMatch": Identify whether required certifications are listed in the resume
-        - For "suggestedImprovements": Provide actionable suggestions on how to include missing skills and certifications in relevant resume sections'''
+        4. DETAILED ANALYSIS REQUIREMENTS:
+   - Extract ONLY legitimate technical skills, methodologies, and qualifications from the job description
+   - Compare with skills and certifications listed in the resume using both exact and semantic matching
+   - For "matchedSkills": List only actual job-required skills present in the resume
+   - For "missingSkills": Include ONLY skills specifically mentioned as requirements in the job description but missing from the resume
+   - For "certificationMatch": Identify whether required certifications are listed in the resume
+   - For "suggestedImprovements": Provide actionable suggestions for incorporating missing critical skills and certifications
+'''
     
 
     response = gen_model(prompt)

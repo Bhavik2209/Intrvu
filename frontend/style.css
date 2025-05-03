@@ -780,3 +780,47 @@ input, button {
     transform: none;
     box-shadow: none;
 }
+
+.score-bar {
+    flex-grow: 1;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.score-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 4px;
+    transition: width 0.5s ease-out, background-color 0.5s ease-out;
+}
+
+/* Score color ranges */
+.score-fill[data-score="0"] { background-color: #ef4444; } /* Red for 0-20% */
+.score-fill[data-score="1"] { background-color: #f97316; } /* Orange for 21-40% */
+.score-fill[data-score="2"] { background-color: #eab308; } /* Yellow for 41-60% */
+.score-fill[data-score="3"] { background-color: #22c55e; } /* Green for 61-80% */
+.score-fill[data-score="4"] { background-color: #3b82f6; } /* Blue for 81-100% */
+
+.feedback-link {
+    position: absolute;
+    top: 18px;
+    right: 30px;
+    color: #3449bd;
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0 8px;
+    font-weight: 500;
+    text-decoration: underline;
+    font-size: 15px;
+    box-shadow: none;
+    z-index: 100;
+    transition: color 0.2s;
+}
+.feedback-link:hover {
+    color: #2563eb;
+    background: none;
+    border: none;
+}

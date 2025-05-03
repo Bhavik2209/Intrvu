@@ -419,12 +419,23 @@ function displayDetailedAnalysisInPopup(container, analysis) {
 
 // Helper function to create score bars
 function createScoreBar(label, percentage, points, maxPoints) {
+    // Always calculate fill percent based on points/maxPoints
+    let fillPercent = (points / maxPoints) * 100;
+    fillPercent = Math.max(0, Math.min(100, fillPercent)); // Clamp between 0 and 100
+
+    // Determine color based on fillPercent
+    let scoreColor = 0;
+    if (fillPercent >= 80) scoreColor = 3;      // Green
+    else if (fillPercent >= 60) scoreColor = 2; // Yellow
+    else if (fillPercent >= 40) scoreColor = 1; // Orange
+    else scoreColor = 0;                        // Red
+
     return `
         <div class="score-item">
             <div class="score-label">${label}</div>
             <div class="score-bar-container">
                 <div class="score-bar">
-                    <div class="score-fill" style="width: ${percentage}%"></div>
+                    <div class="score-fill" data-score="${scoreColor}" style="width: ${fillPercent}%"></div>
                 </div>
                 <div class="score-points">${points}/${maxPoints}</div>
             </div>
@@ -995,9 +1006,53 @@ function safeProp(obj, path, defaultValue = '') {
     return current !== null && current !== undefined ? current : defaultValue;
 }
 
+// Function to store resume in browser storage
+async function storeResumeInStorage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const base64Data = e.target.result;
+            localStorage.setItem('storedResume', base64Data);
+            localStorage.setItem('storedResumeName', file.name);
+            resolve();
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// Function to retrieve resume from storage
+function getResumeFromStorage() {
+    const storedResume = localStorage.getItem('storedResume');
+    const storedResumeName = localStorage.getItem('storedResumeName');
+    
+    if (storedResume && storedResumeName) {
+        // Convert base64 to blob
+        const byteCharacters = atob(storedResume.split(',')[1]);
+        const byteArrays = [];
+        
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteArrays.push(byteCharacters.charCodeAt(i));
+        }
+        
+        const byteArray = new Uint8Array(byteArrays);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        
+        // Create a File object from the blob
+        return new File([blob], storedResumeName, { type: 'application/pdf' });
+    }
+    return null;
+}
+
+// Function to clear stored resume
+function clearStoredResume() {
+    localStorage.removeItem('storedResume');
+    localStorage.removeItem('storedResumeName');
+}
+
 // When popup opens, inject script into current tab
 document.addEventListener('DOMContentLoaded', async () => {
-    let uploadedResume = null; // Store the resume file
+    let uploadedResume = null;
     const resumeUpload = document.getElementById('resumeUpload');
     const resumeStatus = document.getElementById('resumeStatus');
     const submitBtn = document.getElementById('submit-button');
@@ -1005,12 +1060,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const warningMessage = document.getElementById('warningMessage');
     const resultsContainer = document.getElementById('resultsContainer');
     const analysisSection = document.getElementById('analysisSection');
-    const progressBarFill = progressBar.querySelector('.progress-bar-fill'); 
+    const progressBarFill = progressBar.querySelector('.progress-bar-fill');
+
+    // Check for stored resume on load
+    const storedResume = getResumeFromStorage();
+    if (storedResume) {
+        uploadedResume = storedResume;
+        resumeStatus.textContent = `Resume ready to submit: ${storedResume.name}`;
+        resumeStatus.className = 'success';
+        updateButtonState();
+    }
+
     // Function to update button state
     function updateButtonState() {
-        // Button should be disabled when:
-        // - No resume is uploaded
-        // - Request is in progress
         submitBtn.disabled = !uploadedResume || progressBar.style.display === 'block';
     }
 
@@ -1023,6 +1085,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 resumeStatus.textContent = 'Please upload a PDF file';
                 resumeStatus.className = 'error';
                 uploadedResume = null;
+                clearStoredResume();
                 updateButtonState();
                 return;
             }
@@ -1032,18 +1095,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                 resumeStatus.textContent = 'File size should be less than 5MB';
                 resumeStatus.className = 'error';
                 uploadedResume = null;
+                clearStoredResume();
                 updateButtonState();
                 return;
             }
 
-            uploadedResume = file; // Store the file for later use
-            resumeStatus.textContent = 'Resume ready to submit';
-            resumeStatus.className = 'success';
-            updateButtonState();
+            try {
+                // Store the resume in browser storage
+                await storeResumeInStorage(file);
+                uploadedResume = file;
+                resumeStatus.textContent = `Resume ready to submit: ${file.name}`;
+                resumeStatus.className = 'success';
+                updateButtonState();
+            } catch (error) {
+                console.error('Error storing resume:', error);
+                resumeStatus.textContent = 'Error storing resume';
+                resumeStatus.className = 'error';
+                uploadedResume = null;
+                updateButtonState();
+            }
         } else {
             resumeStatus.textContent = 'No file selected';
             resumeStatus.className = '';
             uploadedResume = null;
+            clearStoredResume();
             updateButtonState();
         }
     });
@@ -1056,6 +1131,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dot = document.createElement('div');
         dot.className = 'spinner-dot';
         loadingSpinner.appendChild(dot);
+    }
+    
+    const versionSpan = document.getElementById('ext-version');
+    if (versionSpan && chrome.runtime && chrome.runtime.getManifest) {
+        const manifest = chrome.runtime.getManifest();
+        versionSpan.textContent = manifest.version;
     }
 
     // Add submit button click handler

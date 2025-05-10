@@ -10,3 +10,4 @@ typing-extensions
 langchain
 langchain-openai
 langchain-core
+langchain-community

@@ -1,13 +1,40 @@
 import json
 import os
-from openai import OpenAI
+import time
 
-# Initialize the client with API key from environment variable
+# Import LangChain components
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+from langchain.globals import set_debug
+from langchain.cache import InMemoryCache
+from langchain_core.runnables import RunnableParallel, RunnableLambda
+
+# Initialize environment variables
 api_key = os.environ.get("OPENAI_API_KEY")
 if not api_key:
     raise ValueError("OPENAI_API_KEY environment variable is not set")
 
-client = OpenAI(api_key=api_key)
+# Set up LangChain caching for better performance
+from langchain.globals import set_llm_cache
+set_llm_cache(InMemoryCache())
+
+# Create LLM instance with caching enabled
+llm = ChatOpenAI(
+    model="gpt-4.1",
+    temperature=0.3,
+    max_tokens=8000,  # Increased token limit for more detailed responses
+    api_key=api_key
+)
+
+# Create a memory cache for entire analysis results
+# This will dramatically improve performance for repeat analyses
+from functools import lru_cache
+import hashlib
+
+# Create a cache with a maximum size of 100 items
+_analysis_cache = {}
+MAX_CACHE_SIZE = 100
 
 # Sections with mandatory and optional indicators
 resume_sections = [
@@ -66,25 +93,32 @@ def evaluate_resume_sections(resume_json):
 
 
 def gen_model(prompt):
+    """Generate a response using LangChain for better performance"""
     try:
-        response = client.chat.completions.create(
-            model="gpt-4.1",
-            messages=[
-                {"role": "system", "content": "You are a resume analysis specialist that extracts structured information from resumes and returns it as valid JSON. Only respond with valid JSON, no explanations or extra text."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3,  # Increase temperature for more variation
-            max_tokens=4000
-        )
+        start_time = time.time()
         
-        result = response.choices[0].message.content.strip()
+        # Create a prompt template with system and user messages
+        prompt_template = ChatPromptTemplate.from_messages([
+            ("system", "You are a resume analysis specialist that extracts structured information from resumes and returns it as valid JSON. Only respond with valid JSON, no explanations or extra text."),
+            ("user", "{input}")
+        ])
         
-        # Validate JSON structure
-        parsed_result = json.loads(result)
-        if not isinstance(parsed_result, dict):
+        # Create a parser to ensure we get valid JSON
+        parser = JsonOutputParser()
+        
+        # Create the chain: prompt -> LLM -> parser
+        chain = prompt_template | llm | parser
+        
+        # Run the chain
+        result = chain.invoke({"input": prompt})
+        
+        print(f"LangChain API call completed in {time.time() - start_time:.2f} seconds")
+        
+        # Validate result is a dictionary
+        if not isinstance(result, dict):
             raise ValueError("Response is not a valid JSON object")
             
-        return parsed_result
+        return result
         
     except Exception as e:
         print(f"Error in gen_model: {str(e)}")
@@ -549,19 +583,222 @@ def bullet_point_effectiveness(resume_text):
 
     return response
 
-def detail_resume_analysis(resume_text, job_description):
-    # Perform the analysis and store the results
+def batch_analyze_resume(resume_text, job_description):
+    """Analyze all resume components in a single LLM call for maximum performance"""
     try:
+        start_time = time.time()
+        
+        # Use direct chat completion for maximum control over the response
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        
+        # Create a comprehensive system prompt with detailed instructions
+        system_prompt = """You are a resume analysis specialist that performs comprehensive analysis of resumes against job descriptions. 
+        Return a detailed JSON response with thorough analysis for each component. Include specific examples and detailed feedback in each section."""
+        
+        # Create a detailed user prompt with expected JSON structure
+        user_prompt = f"""Analyze the following resume against the job description. Provide a DETAILED and COMPREHENSIVE analysis with specific examples from both documents.
+        
+        RESUME: {json.dumps(resume_text)}
 
-        sections_resume = evaluate_resume_sections(resume_text)
+JOB DESCRIPTION: {job_description}
 
-        keyword_match_json = keyword_match(resume_text, job_description)
-        job_experience_json = job_experience(resume_text["Work Experience"], job_description)
-        skills_certifications_json = skills_certifications(resume_text["Certifications"],resume_text["Skills and Interests"], job_description)
-        resume_structure_json = resume_structure(sections_resume)
-        action_words_json = action_words(resume_text, job_description)
-        measurable_results_json = measurable_results(resume_text, job_description)
-        bullet_point_effectiveness_json = bullet_point_effectiveness(resume_text)
+
+        
+        Your response MUST follow this exact JSON structure and include DETAILED analysis in each section:
+        {{
+          "keyword_match": {{
+            "score": {{
+              "pointsAwarded": <number>,
+              "matchPercentage": <number>,
+              "rating": <string>
+            }},
+            "analysis": {{
+              "matchedKeywords": [<detailed list with explanations>],
+              "missingKeywords": [<detailed list with explanations>],
+              "suggestedImprovements": "<detailed paragraph with specific suggestions>"
+            }}
+          }},
+          "job_experience": {{
+            "score": {{
+              "pointsAwarded": <number>,
+              "alignmentPercentage": <number>,
+              "rating": <string>
+            }},
+            "analysis": {{
+              "strongMatches": [<detailed list with explanations>],
+              "partialMatches": [<detailed list with explanations>],
+              "missingExperience": [<detailed list with explanations>]
+            }}
+          }},
+          "skills_certifications": {{
+            "score": {{
+              "pointsAwarded": <number>,
+              "matchPercentage": <number>,
+              "rating": <string>
+            }},
+            "analysis": {{
+              "matchedSkills": [<detailed objects with skill name and explanation>],
+              "missingSkills": [<detailed objects with skill name and importance>],
+              "certificationMatch": [<detailed certification analysis>]
+            }}
+          }},
+          "resume_structure": {{
+            "score": {{
+              "pointsAwarded": <number>,
+              "completedSections": <number>,
+              "totalMustHaveSections": <number>
+            }},
+            "analysis": {{
+              "sectionStatus": [<detailed section status with feedback>]
+            }}
+          }},
+          "action_words": {{
+            "score": {{
+              "pointsAwarded": <number>,
+              "actionVerbPercentage": <number>
+            }},
+            "analysis": {{
+              "strongActionVerbs": [<detailed list with context>],
+              "weakActionVerbs": [<detailed list with suggested improvements>]
+            }}
+          }},
+          "measurable_results": {{
+            "score": {{
+              "pointsAwarded": <number>,
+              "measurableResultsCount": <number>
+            }},
+            "analysis": {{
+              "measurableResults": [<detailed list with impact analysis>],
+              "opportunitiesForMetrics": [<detailed list with suggestions>]
+            }}
+          }},
+          "bullet_point_effectiveness": {{
+            "score": {{
+              "pointsAwarded": <number>,
+              "effectiveBulletPercentage": <number>
+            }},
+            "analysis": {{
+              "effectiveBullets": [<detailed list with explanations>],
+              "ineffectiveBullets": [<detailed list with improvement suggestions>]
+            }}
+          }}
+        }}
+
+IMPORTANT: Provide DETAILED analysis in each section with specific examples and actionable feedback."""
+        
+        # Make the API call with increased tokens and temperature for more detailed responses
+        response = client.chat.completions.create(
+            model="gpt-4",  # Using the most capable model
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.5,  # Slightly higher temperature for more detailed responses
+            max_tokens=8000,  # High token limit for detailed analysis
+            response_format={"type": "json_object"}  # Ensure JSON response
+        )
+        
+        # Extract and parse the JSON response
+        result_json = json.loads(response.choices[0].message.content)
+        
+        print(f"Batch analysis completed in {time.time() - start_time:.2f} seconds")
+        return result_json
+    except Exception as e:
+        print(f"Error in batch analysis: {str(e)}")
+        return None
+
+def create_analysis_chain(analysis_function):
+    """Create a chain that runs a specific analysis function"""
+    # The lambda should directly pass the inputs to the function without any nested dictionaries
+    return RunnableLambda(lambda inputs: analysis_function(**inputs))
+
+def detail_resume_analysis(resume_text, job_description, use_cache=True):
+    """Perform resume analysis using LangChain's optimized processing with caching"""
+    try:
+        # Generate a cache key based on resume and job description
+        if use_cache:
+            # Create a deterministic hash of the inputs
+            resume_str = json.dumps(resume_text, sort_keys=True)
+            combined_input = f"{resume_str}||{job_description}"
+            cache_key = hashlib.md5(combined_input.encode()).hexdigest()
+            
+            # Check if we have a cached result
+            if cache_key in _analysis_cache:
+                print("Using cached analysis result")
+                return _analysis_cache[cache_key]
+        
+        # No cache hit, perform the analysis
+        start_time = time.time()
+        print("Starting LangChain resume analysis...")
+        
+        # First try batch analysis (single API call)
+        batch_result = batch_analyze_resume(resume_text, job_description)
+        
+        # Log the batch result structure to help with debugging
+        print(f"Batch result keys: {batch_result.keys() if batch_result else 'None'}")
+        
+        if batch_result and all(k in batch_result for k in [
+            "keyword_match", "job_experience", "skills_certifications", 
+            "resume_structure", "action_words", "measurable_results", 
+            "bullet_point_effectiveness"]):
+            # Batch analysis succeeded
+            print("Using batch analysis results (single API call)")
+            keyword_match_json = batch_result["keyword_match"]
+            job_experience_json = batch_result["job_experience"]
+            skills_certifications_json = batch_result["skills_certifications"]
+            resume_structure_json = batch_result["resume_structure"]
+            action_words_json = batch_result["action_words"]
+            measurable_results_json = batch_result["measurable_results"]
+            bullet_point_effectiveness_json = batch_result["bullet_point_effectiveness"]
+        else:
+            # Fall back to parallel analysis
+            print("Falling back to parallel analysis")
+            
+            # Get resume sections
+            sections_resume = evaluate_resume_sections(resume_text)
+            
+            # Safe access to nested dictionaries
+            work_experience = resume_text.get("Work Experience", {})
+            certifications = resume_text.get("Certifications", [])
+            skills = resume_text.get("Skills and Interests", [])
+            
+            # Create individual chains for each analysis component
+            keyword_match_chain = RunnableLambda(lambda x: keyword_match(resume_text=resume_text, job_description=job_description))
+            job_experience_chain = RunnableLambda(lambda x: job_experience(resume_text=work_experience, job_description=job_description))
+            skills_certifications_chain = RunnableLambda(lambda x: skills_certifications(certifications=certifications, skills=skills, job_description=job_description))
+            resume_structure_chain = RunnableLambda(lambda x: resume_structure(sections=sections_resume))
+            action_words_chain = RunnableLambda(lambda x: action_words(resume_text=resume_text, job_description=job_description))
+            measurable_results_chain = RunnableLambda(lambda x: measurable_results(resume_text=resume_text, job_description=job_description))
+            bullet_point_effectiveness_chain = RunnableLambda(lambda x: bullet_point_effectiveness(resume_text=resume_text))
+            
+            # Create a parallel runnable that doesn't use nested dictionaries
+            parallel_analysis = RunnableParallel(
+                keyword_match=keyword_match_chain,
+                job_experience=job_experience_chain,
+                skills_certifications=skills_certifications_chain,
+                resume_structure=resume_structure_chain,
+                action_words=action_words_chain,
+                measurable_results=measurable_results_chain,
+                bullet_point_effectiveness=bullet_point_effectiveness_chain
+            )
+            
+            # Use an empty input since all parameters are already captured in the lambda functions
+            inputs = {}
+            
+            # Run all analyses in parallel
+            results = parallel_analysis.invoke(inputs)
+            
+            # Extract results
+            keyword_match_json = results["keyword_match"]
+            job_experience_json = results["job_experience"]
+            skills_certifications_json = results["skills_certifications"]
+            resume_structure_json = results["resume_structure"]
+            action_words_json = results["action_words"]
+            measurable_results_json = results["measurable_results"]
+            bullet_point_effectiveness_json = results["bullet_point_effectiveness"]
+        
+        print(f"LangChain analysis completed in {time.time() - start_time:.2f} seconds")
         
         # Ensure all responses are properly parsed JSON objects
         if not isinstance(keyword_match_json, dict):
@@ -628,9 +865,23 @@ def detail_resume_analysis(resume_text, job_description):
 
         # Apply this to skills_certifications_json
         if 'analysis' in skills_certifications_json and 'matchedSkills' in skills_certifications_json['analysis']:
-            skills_certifications_json['analysis']['matchedSkills'] = normalize_skills_list(
-                skills_certifications_json['analysis']['matchedSkills']
-            )
+            try:
+                skills_certifications_json['analysis']['matchedSkills'] = normalize_skills_list(
+                    skills_certifications_json['analysis']['matchedSkills']
+                )
+            except Exception as e:
+                print(f"Error normalizing skills_certifications_json: {str(e)}")
+                skills_certifications_json = {"score": {"pointsAwarded": 0, "matchPercentage": 0, "rating": "Error"}, "analysis": {"matchedSkills": [], "missingSkills": [], "certificationMatch": []}}
+        
+        # Cache the result if caching is enabled
+        if use_cache and cache_key:
+            # If cache is full, remove oldest entry
+            if len(_analysis_cache) >= MAX_CACHE_SIZE:
+                oldest_key = next(iter(_analysis_cache))
+                del _analysis_cache[oldest_key]
+            
+            # Add new result to cache
+            _analysis_cache[cache_key] = result
         
         return result
     

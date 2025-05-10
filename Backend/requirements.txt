@@ -7,3 +7,6 @@ uvicorn
 pydantic
 starlette
 typing-extensions
+langchain
+langchain-openai
+langchain-core

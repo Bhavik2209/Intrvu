@@ -141,10 +141,10 @@ def keyword_match(resume_text, job_description):
    - First identify and extract only relevant technical skills, job-specific qualifications, tools, methodologies, and industry-specific terminology from the job description
    - Calculate the percentage of these meaningful job-related keywords found in the resume
    - Assign points and ratings based on match percentage:
-       * 90%+ match: 20 points, "Excellent" rating (✅)
-       * 70-89% match: 15 points, "Good" rating (👍)
-       * 50-69% match: 10 points, "Fair" rating (⚠️)
-       * 30-49% match: 5 points, "Needs Improvement" rating (🛑)
+       * 90%+ match: 21 points, "Excellent" rating (✅)
+       * 70-89% match: 16 points, "Good" rating (👍)
+       * 50-69% match: 11 points, "Fair" rating (⚠️)
+       * 30-49% match: 6 points, "Needs Improvement" rating (🛑)
        * Below 30% match: 0 points, "Poor" rating (❌)
 
         2. JSON STRUCTURE:
@@ -196,9 +196,9 @@ def job_experience(resume_text, job_description):
         1. SCORING SYSTEM:
         - Calculate the percentage of job responsibilities covered in the resume's work experience
         - Assign points and ratings based on alignment percentage:
-            * 80%+ match: 20 points, "Strong match" rating (✅)
-            * 60-79% match: 15 points, "Good alignment" rating (👍)
-            * 40-59% match: 10 points, "Partial match" rating (⚠️)
+            * 80%+ match: 18 points, "Strong match" rating (✅)
+            * 60-79% match: 14 points, "Good alignment" rating (👍)
+            * 40-59% match: 9 points, "Partial match" rating (⚠️)
             * 20-39% match: 5 points, "Weak match" rating (🛑)
             * Below 20% match: 0 points, "No relevant experience" rating (❌)
 
@@ -242,43 +242,57 @@ def job_experience(resume_text, job_description):
 def skills_certifications(certifications,skills, job_description):
     prompt = f'''Given the job description: {job_description}, these are the certifications: {certifications} and these are skills present in the resume: {skills}.
 
-Analyze how well the skills and certifications in the resume match the requirements in the job description. Generate a JSON response that includes a skills and certifications match score and detailed analysis. Follow these specifications:
+Analyze how well the skills, education, and certifications in the resume match the requirements in the job description. Generate a JSON response that includes a comprehensive match score and detailed analysis. Follow these specifications:
 
-NOTE: In the matched skills section, ONLY include skills that are EXPLICITLY listed in the resume skills list or have direct semantic equivalents. Do NOT include any skill in "matchedSkills" unless it is definitely in the resume skills list.
+NOTE: This analysis should cover BOTH education/certifications AND technical/soft skills components, which together account for 35% of the Job Fit Score (21 points total).
 
-1. SKILLS EXTRACTION PROCESS:
-   - First, carefully extract only legitimate technical skills, tools, technologies, methodologies, and relevant qualifications from the job description
-   - Focus on keywords that represent actual competencies employers seek (programming languages, tools, methodologies, domain knowledge)
-   - Do NOT include random phrases, job responsibilities, or generic terms as skills
-   - For technical positions: Focus on specific technologies, programming languages, frameworks, and technical methodologies
-   - For non-technical positions: Focus on relevant domain-specific skills, methodologies, and tools
+1. SKILLS & EDUCATION EXTRACTION PROCESS:
+   - First, carefully extract from the job description:
+     * Required technical skills, tools, technologies, and methodologies
+     * Required education level and field of study
+     * Required certifications and qualifications
+     * Domain-specific knowledge requirements
+   - Focus on keywords that represent actual competencies employers seek
+   - Do NOT include random phrases, job responsibilities, or generic terms
 
 2. STRICT MATCHING PROCEDURE:
-   - Create an array of all skills mentioned in the job description
-   - For each skill in this array, check if it EXACTLY appears in the resume skills list
-   - Only mark a skill as "matched" if:
-     * It exists verbatim in the resume skills list, OR
-     * A direct semantic equivalent exists (e.g., "Python programming" matches "Python")
+   - Create separate arrays for required skills, education, and certifications
+   - For each item, check if it EXACTLY appears in the resume or has a direct semantic equivalent
+   - Only mark an item as "matched" if it definitely exists in the resume
    - Be extremely conservative - when in doubt, mark as "not matched"
    - Double-check all matches to ensure no false positives
 
-3. SCORING SYSTEM:
-   - Calculate the percentage of required skills and certifications in the job description that are present in the resume
-   - Check for semantic matches (e.g., "Python programming" in job description matches "Python" in resume)
-   - Assign points and ratings based on match percentage:
-      * 90%+ match: 15 points, "Excellent" rating (✅)
-      * 70-89% match: 12 points, "Good" rating (👍)
-      * 50-69% match: 8 points, "Fair" rating (⚠️)
-      * 30-49% match: 4 points, "Needs Improvement" rating (🛑)
-      * Below 30% match: 0 points, "Poor" rating (❌)
+3. SCORING SYSTEM (21 POINTS TOTAL):
+   - Education & Certifications (12 points):
+     * 90%+ match: 12 points, "Excellent" rating (✅)
+     * 70-89% match: 9 points, "Good" rating (👍)
+     * 50-69% match: 6 points, "Fair" rating (⚠️)
+     * 30-49% match: 3 points, "Needs Improvement" rating (🛑)
+     * Below 30% match: 0 points, "Poor" rating (❌)
+   - Skills & Tools Relevance (9 points):
+     * 90%+ match: 9 points, "Excellent" rating (✅)
+     * 70-89% match: 7 points, "Good" rating (👍)
+     * 50-69% match: 5 points, "Fair" rating (⚠️)
+     * 30-49% match: 2 points, "Needs Improvement" rating (🛑)
+     * Below 30% match: 0 points, "Poor" rating (❌)
       
         4. JSON STRUCTURE:
         {{
             "score": {{
-            "matchPercentage": [percentage],
-            "pointsAwarded": [points],
-            "rating": "[rating text]",
-            "ratingSymbol": "[emoji]"
+            "matchPercentage": [percentage],         // Original field for backward compatibility
+            "educationMatchPercentage": [percentage],  // For education & certifications
+            "educationPointsAwarded": [points],       // Out of 12 points
+            "educationRating": "[rating text]",
+            "educationRatingSymbol": "[emoji]",
+            "skillsMatchPercentage": [percentage],    // For skills & tools
+            "skillsPointsAwarded": [points],         // Out of 9 points
+            "skillsRating": "[rating text]",
+            "skillsRatingSymbol": "[emoji]",
+            "totalPointsAwarded": [points],          // Combined total (max 21)
+            "totalMatchPercentage": [percentage],    // Overall match percentage
+            "pointsAwarded": [points],              // Keep this for backward compatibility
+            "rating": "[overall rating text]",
+            "ratingSymbol": "[overall emoji]"
             }},
             "analysis": {{
             "matchedSkills": [
@@ -295,6 +309,13 @@ NOTE: In the matched skills section, ONLY include skills that are EXPLICITLY lis
                 "symbol": "❌"
                 }}
             ],
+            "educationMatch": [
+                {{
+                "requirement": "[education requirement from job]",
+                "status": "Found/Not Found",
+                "symbol": "🎓/❌"
+                }}
+            ],
             "certificationMatch": [
                 {{
                 "certification": "[certification name that should be there and that is there (present and not present both)]",
@@ -307,12 +328,13 @@ NOTE: In the matched skills section, ONLY include skills that are EXPLICITLY lis
         }}
 
         5. DETAILED ANALYSIS REQUIREMENTS:
-   - Extract ONLY legitimate technical skills, methodologies, and qualifications from the job description
-   - Compare with skills and certifications listed in the resume using both exact and semantic matching
+   - Extract ONLY legitimate technical skills, methodologies, education requirements, and qualifications from the job description
+   - Compare with skills, education, and certifications listed in the resume using both exact and semantic matching
    - For "matchedSkills": List ONLY skills that are DEFINITELY present in the resume skills list
    - For "missingSkills": Include ONLY skills specifically mentioned as requirements in the job description but missing from the resume
+   - For "educationMatch": Identify whether required education levels and fields of study are met in the resume
    - For "certificationMatch": Identify whether required certifications are listed in the resume
-   - For "suggestedImprovements": Provide actionable suggestions for incorporating missing critical skills and certifications
+   - For "suggestedImprovements": Provide actionable suggestions for incorporating missing critical skills, education requirements, and certifications
 '''
     
 
@@ -337,16 +359,16 @@ def resume_structure(sections):
     
     # Determine score
     if completed_sections == 6:
-        points = 15
+        points = 12
         rating_symbol = "✅"
     elif completed_sections == 5:
-        points = 12
+        points = 9
         rating_symbol = "👍"
     elif completed_sections == 4:
-        points = 8
+        points = 6
         rating_symbol = "⚠️"
     elif completed_sections == 3:
-        points = 4
+        points = 3
         rating_symbol = "🛑"
     else:
         points = 0
@@ -413,8 +435,8 @@ def action_words(resume_text, job_description):
         - Identify weak verbs that could be replaced with stronger alternatives
         - Assign points based on percentage of strong action verbs used:
             * 80%+ strong action words: 10 points (✅)
-            * 60-79% strong action words: 8 points (👍)
-            * 40-59% strong action words: 5 points (⚠️)
+            * 60-79% strong action words: 7 points (👍)
+            * 40-59% strong action words: 4 points (⚠️)
             * Below 40% strong action words: 2 points (🛑)
 
         2. JSON STRUCTURE:
@@ -536,9 +558,9 @@ def bullet_point_effectiveness(resume_text):
             * Structure (begins with action verb)
         - Calculate the percentage of bullet points meeting effectiveness criteria
         - Assign points based on percentage of effective bullet points:
-            * 90%+ bullets effective: 10 points (✅)
-            * 70-89% bullets effective: 8 points (👍)
-            * 50-69% bullets effective: 5 points (⚠️)
+            * 90%+ bullets effective: 8 points (✅)
+            * 70-89% bullets effective: 6 points (👍)
+            * 50-69% bullets effective: 4 points (⚠️)
             * Below 50% bullets effective: 2 points (🛑)
 
         2. JSON STRUCTURE:
@@ -873,6 +895,21 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True):
                 print(f"Error normalizing skills_certifications_json: {str(e)}")
                 skills_certifications_json = {"score": {"pointsAwarded": 0, "matchPercentage": 0, "rating": "Error"}, "analysis": {"matchedSkills": [], "missingSkills": [], "certificationMatch": []}}
         
+        # Ensure backward compatibility for skills_certifications_json
+        if 'score' in skills_certifications_json:
+            # Make sure matchPercentage exists for backward compatibility
+            if 'matchPercentage' not in skills_certifications_json['score']:
+                # If we have skillsMatchPercentage, use that
+                if 'skillsMatchPercentage' in skills_certifications_json['score']:
+                    skills_certifications_json['score']['matchPercentage'] = skills_certifications_json['score']['skillsMatchPercentage']
+                # Otherwise use totalMatchPercentage or a default
+                elif 'totalMatchPercentage' in skills_certifications_json['score']:
+                    skills_certifications_json['score']['matchPercentage'] = skills_certifications_json['score']['totalMatchPercentage']
+                else:
+                    # Calculate a default percentage based on points awarded
+                    points = skills_certifications_json['score'].get('pointsAwarded', 0)
+                    skills_certifications_json['score']['matchPercentage'] = (points / 12) * 100 if points > 0 else 0
+        
         # Cache the result if caching is enabled
         if use_cache and cache_key:
             # If cache is full, remove oldest entry
@@ -905,15 +942,34 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True):
 def overall_score(score1, score2, score3, score4, score5, score6, score7):
     # Convert all scores to float or int, with default of 0
     try:
-        s1 = float(score1) if score1 is not None else 0
-        s2 = float(score2) if score2 is not None else 0
-        s3 = float(score3) if score3 is not None else 0
-        s4 = float(score4) if score4 is not None else 0
-        s5 = float(score5) if score5 is not None else 0
-        s6 = float(score6) if score6 is not None else 0
-        s7 = float(score7) if score7 is not None else 0
+        # Job Fit Score components (60% of total)
+        s1 = float(score1) if score1 is not None else 0  # Keyword & Contextual Match (35% of Job Fit = 21 pts)
+        s2 = float(score2) if score2 is not None else 0  # Experience Alignment (30% of Job Fit = 18 pts)
+        s3 = float(score3) if score3 is not None else 0  # Skills & Certifications component from API
         
-        return ((s1/20)*20) + ((s2/20)*20) + ((s3/15)*15) + ((s4/15)*15) + ((s5/10)*10) + ((s6/10)*10) + ((s7/10)*10)
+        # Resume Quality Score components (40% of total)
+        s4 = float(score4) if score4 is not None else 0  # Resume Structure (30% of Resume Quality = 12 pts)
+        s5 = float(score5) if score5 is not None else 0  # Action Words Usage (25% of Resume Quality = 10 pts)
+        s6 = float(score6) if score6 is not None else 0  # Measurable Results (25% of Resume Quality = 10 pts)
+        s7 = float(score7) if score7 is not None else 0  # Bullet Point Effectiveness (20% of Resume Quality = 8 pts)
+        
+        # Calculate Job Fit Score (60% of total)
+        # For the Skills & Certifications component (s3), we need to split it into:
+        # - Education & Certifications (20% of Job Fit = 12 pts)
+        # - Skills & Tools Relevance (15% of Job Fit = 9 pts)
+        
+        # We'll use the s3 score (out of 12 points) to calculate both components proportionally
+        education_score = (s3/12) * 12  # Education & Certifications (12 pts)
+        skills_score = (s3/12) * 9      # Skills & Tools Relevance (9 pts)
+        
+        # Calculate total Job Fit Score (60 pts)
+        job_fit_score = ((s1/21)*21) + ((s2/18)*18) + education_score + skills_score
+        
+        # Calculate Resume Quality Score (40% of total)
+        resume_quality_score = ((s4/12)*12) + ((s5/10)*10) + ((s6/10)*10) + ((s7/8)*8)
+        
+        # Return combined score
+        return job_fit_score + resume_quality_score
     except (ValueError, TypeError) as e:
         print(f"Error calculating overall score: {e}")
         print(f"Scores: {score1}, {score2}, {score3}, {score4}, {score5}, {score6}, {score7}")

@@ -1,6 +1,6 @@
 {
-    "name": "Intrvu - Resume Fit Analyzer",
-    "version": "0.0.2",
+    "name": "IntrvuFit - Resume optimizer",
+    "version": "0.0.5",
     "manifest_version": 3,
     "action": {
         "default_popup": "popup.html",
@@ -9,7 +9,7 @@
     },
     "permissions": [
         "activeTab",
-        "scripting"   
+        "scripting"
     ],
     "host_permissions": [
         "https://www.linkedin.com/jobs/*",

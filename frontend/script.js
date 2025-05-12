@@ -176,7 +176,13 @@ function displayDetailedAnalysisInPopup(container, analysis) {
     // Add header with back button
     const header = `
         <div class="analysis-header">
-            <button class="back-button" id="analysis-back-button">← Back</button>
+            <button class="back-button" id="analysis-back-button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Back</span>
+            </button>
             <h1>Detailed Analysis</h1>
             <div class="overall-score">
                 <div class="score-circle" style="background: conic-gradient(${getScoreColor(analysis.overall_score)} ${analysis.overall_score}%, #e0e0e0 0)">
@@ -206,13 +212,14 @@ function displayDetailedAnalysisInPopup(container, analysis) {
             <div id="summary-content" class="tab-content active">
                 <div class="score-breakdown">
                     <h3>Score Breakdown</h3>
-                    ${createScoreBar('Keyword Match', analysis.keyword_match.score.matchPercentage, analysis.keyword_match.score.pointsAwarded, 20)}
-                    ${createScoreBar('Job Experience', analysis.job_experience.score.alignmentPercentage, analysis.job_experience.score.pointsAwarded, 20)}
-                    ${createScoreBar('Skills & Certifications', analysis.skills_certifications.score.matchPercentage, analysis.skills_certifications.score.pointsAwarded, 15)}
-                    ${createScoreBar('Resume Structure', (analysis.resume_structure.score.pointsAwarded/15)*100, analysis.resume_structure.score.pointsAwarded, 15)}
+                    ${createScoreBar('Keyword Match', analysis.keyword_match.score.matchPercentage, analysis.keyword_match.score.pointsAwarded, 21)}
+                    ${createScoreBar('Job Experience', analysis.job_experience.score.alignmentPercentage, analysis.job_experience.score.pointsAwarded, 18)}
+                    ${createScoreBar('Education & Certifications', analysis.skills_certifications.score.educationMatchPercentage || analysis.skills_certifications.score.matchPercentage, analysis.skills_certifications.score.educationPointsAwarded || (analysis.skills_certifications.score.pointsAwarded * 0.57), 12)}
+                    ${createScoreBar('Skills & Tools', analysis.skills_certifications.score.skillsMatchPercentage || analysis.skills_certifications.score.matchPercentage, analysis.skills_certifications.score.skillsPointsAwarded || (analysis.skills_certifications.score.pointsAwarded * 0.43), 9)}
+                    ${createScoreBar('Resume Structure', (analysis.resume_structure.score.pointsAwarded/12)*100, analysis.resume_structure.score.pointsAwarded, 12)}
                     ${createScoreBar('Action Words', analysis.action_words.score.actionVerbPercentage, analysis.action_words.score.pointsAwarded, 10)}
                     ${createScoreBar('Measurable Results', (analysis.measurable_results.score.pointsAwarded/10)*100, analysis.measurable_results.score.pointsAwarded, 10)}
-                    ${createScoreBar('Bullet Points', analysis.bullet_point_effectiveness.score.effectiveBulletPercentage, analysis.bullet_point_effectiveness.score.pointsAwarded, 10)}
+                    ${createScoreBar('Bullet Points', analysis.bullet_point_effectiveness.score.effectiveBulletPercentage, analysis.bullet_point_effectiveness.score.pointsAwarded, 8)}
                 </div>
             </div>
 
@@ -1191,7 +1198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             formData.append('resume', uploadedResume);
             formData.append('jobData', JSON.stringify(result));
 
-            const response = await fetch('http://127.0.0.1:8000/api/analyze', {
+            const response = await fetch('https://intrvu.onrender.com/api/analyze', {
                 method: 'POST',
                 body: formData
             });

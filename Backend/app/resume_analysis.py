@@ -605,130 +605,8 @@ def bullet_point_effectiveness(resume_text):
 
     return response
 
-def batch_analyze_resume(resume_text, job_description):
-    """Analyze all resume components in a single LLM call for maximum performance"""
-    try:
-        start_time = time.time()
-        
-        # Use direct chat completion for maximum control over the response
-        from openai import OpenAI
-        client = OpenAI(api_key=api_key)
-        
-        # Create a comprehensive system prompt with detailed instructions
-        system_prompt = """You are a resume analysis specialist that performs comprehensive analysis of resumes against job descriptions. 
-        Return a detailed JSON response with thorough analysis for each component. Include specific examples and detailed feedback in each section."""
-        
-        # Create a detailed user prompt with expected JSON structure
-        user_prompt = f"""Analyze the following resume against the job description. Provide a DETAILED and COMPREHENSIVE analysis with specific examples from both documents.
-        
-        RESUME: {json.dumps(resume_text)}
-
-JOB DESCRIPTION: {job_description}
-
-
-        
-        Your response MUST follow this exact JSON structure and include DETAILED analysis in each section:
-        {{
-          "keyword_match": {{
-            "score": {{
-              "pointsAwarded": <number>,
-              "matchPercentage": <number>,
-              "rating": <string>
-            }},
-            "analysis": {{
-              "matchedKeywords": [<detailed list with explanations>],
-              "missingKeywords": [<detailed list with explanations>],
-              "suggestedImprovements": "<detailed paragraph with specific suggestions>"
-            }}
-          }},
-          "job_experience": {{
-            "score": {{
-              "pointsAwarded": <number>,
-              "alignmentPercentage": <number>,
-              "rating": <string>
-            }},
-            "analysis": {{
-              "strongMatches": [<detailed list with explanations>],
-              "partialMatches": [<detailed list with explanations>],
-              "missingExperience": [<detailed list with explanations>]
-            }}
-          }},
-          "skills_certifications": {{
-            "score": {{
-              "pointsAwarded": <number>,
-              "matchPercentage": <number>,
-              "rating": <string>
-            }},
-            "analysis": {{
-              "matchedSkills": [<detailed objects with skill name and explanation>],
-              "missingSkills": [<detailed objects with skill name and importance>],
-              "certificationMatch": [<detailed certification analysis>]
-            }}
-          }},
-          "resume_structure": {{
-            "score": {{
-              "pointsAwarded": <number>,
-              "completedSections": <number>,
-              "totalMustHaveSections": <number>
-            }},
-            "analysis": {{
-              "sectionStatus": [<detailed section status with feedback>]
-            }}
-          }},
-          "action_words": {{
-            "score": {{
-              "pointsAwarded": <number>,
-              "actionVerbPercentage": <number>
-            }},
-            "analysis": {{
-              "strongActionVerbs": [<detailed list with context>],
-              "weakActionVerbs": [<detailed list with suggested improvements>]
-            }}
-          }},
-          "measurable_results": {{
-            "score": {{
-              "pointsAwarded": <number>,
-              "measurableResultsCount": <number>
-            }},
-            "analysis": {{
-              "measurableResults": [<detailed list with impact analysis>],
-              "opportunitiesForMetrics": [<detailed list with suggestions>]
-            }}
-          }},
-          "bullet_point_effectiveness": {{
-            "score": {{
-              "pointsAwarded": <number>,
-              "effectiveBulletPercentage": <number>
-            }},
-            "analysis": {{
-              "effectiveBullets": [<detailed list with explanations>],
-              "ineffectiveBullets": [<detailed list with improvement suggestions>]
-            }}
-          }}
-        }}
-
-IMPORTANT: Provide DETAILED analysis in each section with specific examples and actionable feedback."""
-        
-        # Make the API call with increased tokens and temperature for more detailed responses
-        response = client.chat.completions.create(
-            model="gpt-4",  # Using the most capable model
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.5,  # Slightly higher temperature for more detailed responses
-            max_tokens=8000,  # High token limit for detailed analysis
-            response_format={"type": "json_object"}  # Ensure JSON response
-        )
-        
-        # Extract and parse the JSON response
-        result_json = json.loads(response.choices[0].message.content)
-        
-        print(f"Batch analysis completed in {time.time() - start_time:.2f} seconds")
-        return result_json
-    except Exception as e:
-        print(f"Error in batch analysis: {str(e)}")
-        return None
+# Batch analysis function has been removed as it was not providing optimal results
+# The parallel analysis approach is faster and more accurate
 
 def create_analysis_chain(analysis_function):
     """Create a chain that runs a specific analysis function"""
@@ -754,71 +632,51 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True):
         start_time = time.time()
         print("Starting LangChain resume analysis...")
         
-        # First try batch analysis (single API call)
-        batch_result = batch_analyze_resume(resume_text, job_description)
+        # Use parallel analysis (faster and more accurate)
+        print("Using parallel analysis for better results")
         
-        # Log the batch result structure to help with debugging
-        print(f"Batch result keys: {batch_result.keys() if batch_result else 'None'}")
+        # Get resume sections
+        sections_resume = evaluate_resume_sections(resume_text)
         
-        if batch_result and all(k in batch_result for k in [
-            "keyword_match", "job_experience", "skills_certifications", 
-            "resume_structure", "action_words", "measurable_results", 
-            "bullet_point_effectiveness"]):
-            # Batch analysis succeeded
-            print("Using batch analysis results (single API call)")
-            keyword_match_json = batch_result["keyword_match"]
-            job_experience_json = batch_result["job_experience"]
-            skills_certifications_json = batch_result["skills_certifications"]
-            resume_structure_json = batch_result["resume_structure"]
-            action_words_json = batch_result["action_words"]
-            measurable_results_json = batch_result["measurable_results"]
-            bullet_point_effectiveness_json = batch_result["bullet_point_effectiveness"]
-        else:
-            # Fall back to parallel analysis
-            print("Falling back to parallel analysis")
-            
-            # Get resume sections
-            sections_resume = evaluate_resume_sections(resume_text)
-            
-            # Safe access to nested dictionaries
-            work_experience = resume_text.get("Work Experience", {})
-            certifications = resume_text.get("Certifications", [])
-            skills = resume_text.get("Skills and Interests", [])
-            
-            # Create individual chains for each analysis component
-            keyword_match_chain = RunnableLambda(lambda x: keyword_match(resume_text=resume_text, job_description=job_description))
-            job_experience_chain = RunnableLambda(lambda x: job_experience(resume_text=work_experience, job_description=job_description))
-            skills_certifications_chain = RunnableLambda(lambda x: skills_certifications(certifications=certifications, skills=skills, job_description=job_description))
-            resume_structure_chain = RunnableLambda(lambda x: resume_structure(sections=sections_resume))
-            action_words_chain = RunnableLambda(lambda x: action_words(resume_text=resume_text, job_description=job_description))
-            measurable_results_chain = RunnableLambda(lambda x: measurable_results(resume_text=resume_text, job_description=job_description))
-            bullet_point_effectiveness_chain = RunnableLambda(lambda x: bullet_point_effectiveness(resume_text=resume_text))
-            
-            # Create a parallel runnable that doesn't use nested dictionaries
-            parallel_analysis = RunnableParallel(
-                keyword_match=keyword_match_chain,
-                job_experience=job_experience_chain,
-                skills_certifications=skills_certifications_chain,
-                resume_structure=resume_structure_chain,
-                action_words=action_words_chain,
-                measurable_results=measurable_results_chain,
-                bullet_point_effectiveness=bullet_point_effectiveness_chain
-            )
-            
-            # Use an empty input since all parameters are already captured in the lambda functions
-            inputs = {}
-            
-            # Run all analyses in parallel
-            results = parallel_analysis.invoke(inputs)
-            
-            # Extract results
-            keyword_match_json = results["keyword_match"]
-            job_experience_json = results["job_experience"]
-            skills_certifications_json = results["skills_certifications"]
-            resume_structure_json = results["resume_structure"]
-            action_words_json = results["action_words"]
-            measurable_results_json = results["measurable_results"]
-            bullet_point_effectiveness_json = results["bullet_point_effectiveness"]
+        # Safe access to nested dictionaries
+        work_experience = resume_text.get("Work Experience", {})
+        certifications = resume_text.get("Certifications", [])
+        skills = resume_text.get("Skills and Interests", [])
+        
+        # Create individual chains for each analysis component
+        keyword_match_chain = RunnableLambda(lambda x: keyword_match(resume_text=resume_text, job_description=job_description))
+        job_experience_chain = RunnableLambda(lambda x: job_experience(resume_text=work_experience, job_description=job_description))
+        skills_certifications_chain = RunnableLambda(lambda x: skills_certifications(certifications=certifications, skills=skills, job_description=job_description))
+        resume_structure_chain = RunnableLambda(lambda x: resume_structure(sections=sections_resume))
+        action_words_chain = RunnableLambda(lambda x: action_words(resume_text=resume_text, job_description=job_description))
+        measurable_results_chain = RunnableLambda(lambda x: measurable_results(resume_text=resume_text, job_description=job_description))
+        bullet_point_effectiveness_chain = RunnableLambda(lambda x: bullet_point_effectiveness(resume_text=resume_text))
+        
+        # Create a parallel runnable that doesn't use nested dictionaries
+        parallel_analysis = RunnableParallel(
+            keyword_match=keyword_match_chain,
+            job_experience=job_experience_chain,
+            skills_certifications=skills_certifications_chain,
+            resume_structure=resume_structure_chain,
+            action_words=action_words_chain,
+            measurable_results=measurable_results_chain,
+            bullet_point_effectiveness=bullet_point_effectiveness_chain
+        )
+        
+        # Use an empty input since all parameters are already captured in the lambda functions
+        inputs = {}
+        
+        # Run all analyses in parallel
+        results = parallel_analysis.invoke(inputs)
+        
+        # Extract results
+        keyword_match_json = results["keyword_match"]
+        job_experience_json = results["job_experience"]
+        skills_certifications_json = results["skills_certifications"]
+        resume_structure_json = results["resume_structure"]
+        action_words_json = results["action_words"]
+        measurable_results_json = results["measurable_results"]
+        bullet_point_effectiveness_json = results["bullet_point_effectiveness"]
         
         print(f"LangChain analysis completed in {time.time() - start_time:.2f} seconds")
         
@@ -942,31 +800,40 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True):
 def overall_score(score1, score2, score3, score4, score5, score6, score7):
     # Convert all scores to float or int, with default of 0
     try:
+        # Define the correct maximum points for each component
+        max_keyword_points = 21       # Keyword & Contextual Match (35% of Job Fit = 21 pts)
+        max_experience_points = 18     # Experience Alignment (30% of Job Fit = 18 pts)
+        max_skills_cert_points = 21    # Combined Skills & Certifications (21 pts total)
+        max_structure_points = 12      # Resume Structure (30% of Resume Quality = 12 pts)
+        max_action_words_points = 10   # Action Words Usage (25% of Resume Quality = 10 pts)
+        max_measurable_results_points = 10  # Measurable Results (25% of Resume Quality = 10 pts)
+        max_bullet_points_points = 8   # Bullet Point Effectiveness (20% of Resume Quality = 8 pts)
+        
         # Job Fit Score components (60% of total)
-        s1 = float(score1) if score1 is not None else 0  # Keyword & Contextual Match (35% of Job Fit = 21 pts)
-        s2 = float(score2) if score2 is not None else 0  # Experience Alignment (30% of Job Fit = 18 pts)
+        s1 = float(score1) if score1 is not None else 0  # Keyword & Contextual Match
+        s2 = float(score2) if score2 is not None else 0  # Experience Alignment
         s3 = float(score3) if score3 is not None else 0  # Skills & Certifications component from API
         
         # Resume Quality Score components (40% of total)
-        s4 = float(score4) if score4 is not None else 0  # Resume Structure (30% of Resume Quality = 12 pts)
-        s5 = float(score5) if score5 is not None else 0  # Action Words Usage (25% of Resume Quality = 10 pts)
-        s6 = float(score6) if score6 is not None else 0  # Measurable Results (25% of Resume Quality = 10 pts)
-        s7 = float(score7) if score7 is not None else 0  # Bullet Point Effectiveness (20% of Resume Quality = 8 pts)
+        s4 = float(score4) if score4 is not None else 0  # Resume Structure
+        s5 = float(score5) if score5 is not None else 0  # Action Words Usage
+        s6 = float(score6) if score6 is not None else 0  # Measurable Results
+        s7 = float(score7) if score7 is not None else 0  # Bullet Point Effectiveness
         
         # Calculate Job Fit Score (60% of total)
         # For the Skills & Certifications component (s3), we need to split it into:
         # - Education & Certifications (20% of Job Fit = 12 pts)
         # - Skills & Tools Relevance (15% of Job Fit = 9 pts)
         
-        # We'll use the s3 score (out of 12 points) to calculate both components proportionally
-        education_score = (s3/12) * 12  # Education & Certifications (12 pts)
-        skills_score = (s3/12) * 9      # Skills & Tools Relevance (9 pts)
+        # We'll use the s3 score proportionally for both education and skills components
+        education_score = (s3/max_skills_cert_points) * 12  # Education & Certifications (12 pts)
+        skills_score = (s3/max_skills_cert_points) * 9      # Skills & Tools Relevance (9 pts)
         
         # Calculate total Job Fit Score (60 pts)
-        job_fit_score = ((s1/21)*21) + ((s2/18)*18) + education_score + skills_score
+        job_fit_score = s1 + s2 + education_score + skills_score
         
         # Calculate Resume Quality Score (40% of total)
-        resume_quality_score = ((s4/12)*12) + ((s5/10)*10) + ((s6/10)*10) + ((s7/8)*8)
+        resume_quality_score = s4 + s5 + s6 + s7
         
         # Return combined score
         return job_fit_score + resume_quality_score

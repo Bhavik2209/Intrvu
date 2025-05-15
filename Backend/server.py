@@ -15,10 +15,13 @@ if __name__ == "__main__":
     # Run the server with multiple workers
     # Using 0.0.0.0 to bind to all network interfaces
     # This allows connections from other devices on the network
+    # Get port from environment variable (for Render) or use default 8000
+    port = int(os.environ.get("PORT", 8000))
+    
     uvicorn.run(
         "api.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         workers=num_workers,
         log_level="info",
         reload=False  # Disable reload in production with multiple workers

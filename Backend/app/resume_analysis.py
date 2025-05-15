@@ -613,15 +613,16 @@ def create_analysis_chain(analysis_function):
     # The lambda should directly pass the inputs to the function without any nested dictionaries
     return RunnableLambda(lambda inputs: analysis_function(**inputs))
 
-def detail_resume_analysis(resume_text, job_description, use_cache=True):
+def detail_resume_analysis(resume_text, job_description, use_cache=True, version="v2.0"):  # Added version parameter for cache busting
     """Perform resume analysis using LangChain's optimized processing with caching"""
     try:
-        # Generate a cache key based on resume and job description
+        # Generate a cache key based on resume and job description and version
         if use_cache:
-            # Create a deterministic hash of the inputs
+            # Create a deterministic hash of the inputs including version for cache busting
             resume_str = json.dumps(resume_text, sort_keys=True)
-            combined_input = f"{resume_str}||{job_description}"
+            combined_input = f"{resume_str}||{job_description}||{version}"
             cache_key = hashlib.md5(combined_input.encode()).hexdigest()
+            print(f"Using cache key with version {version}")
             
             # Check if we have a cached result
             if cache_key in _analysis_cache:
@@ -720,9 +721,23 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True):
             bullet_point_effectiveness_json['score']['pointsAwarded']
         )
         
+        # Round all scores in the individual components
+        for component in [keyword_match_json, job_experience_json, skills_certifications_json, 
+                          resume_structure_json, action_words_json, measurable_results_json, 
+                          bullet_point_effectiveness_json]:
+            if 'score' in component and 'pointsAwarded' in component['score']:
+                component['score']['pointsAwarded'] = round(float(component['score']['pointsAwarded']))
+            
+            # Round percentage values if they exist
+            if 'score' in component:
+                for key in component['score']:
+                    if 'percentage' in key.lower() or key.lower().endswith('count'):
+                        if component['score'][key] is not None and isinstance(component['score'][key], (int, float)):
+                            component['score'][key] = round(float(component['score'][key]))
+        
         # Combine all the JSON results into a single dictionary
         result = {
-            "overall_score": overall_resume_score,
+            "overall_score": round(overall_resume_score),
             "keyword_match": keyword_match_json,
             "job_experience": job_experience_json,
             "skills_certifications": skills_certifications_json,
@@ -835,8 +850,8 @@ def overall_score(score1, score2, score3, score4, score5, score6, score7):
         # Calculate Resume Quality Score (40% of total)
         resume_quality_score = s4 + s5 + s6 + s7
         
-        # Return combined score
-        return job_fit_score + resume_quality_score
+        # Return combined score rounded to the nearest integer
+        return round(job_fit_score + resume_quality_score)
     except (ValueError, TypeError) as e:
         print(f"Error calculating overall score: {e}")
         print(f"Scores: {score1}, {score2}, {score3}, {score4}, {score5}, {score6}, {score7}")

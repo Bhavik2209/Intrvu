@@ -12,3 +12,4 @@ langchain-openai
 langchain-core
 langchain-community
 gunicorn
+psutil

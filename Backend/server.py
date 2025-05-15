@@ -3,6 +3,7 @@ import os
 import multiprocessing
 import sys
 import logging
+import psutil
 
 # Configure logging
 logging.basicConfig(
@@ -14,24 +15,55 @@ logging.basicConfig(
 )
 logger = logging.getLogger("server")
 
+def is_running_on_render():
+    """Check if we're running on Render"""
+    return os.environ.get("RENDER", "") == "true"
+
+def get_optimal_workers():
+    """Calculate optimal number of workers based on available resources"""
+    try:
+        # Get available memory in GB
+        available_memory_gb = psutil.virtual_memory().available / (1024 * 1024 * 1024)
+        # Get number of CPU cores
+        num_cores = multiprocessing.cpu_count()
+        
+        logger.info(f"Available memory: {available_memory_gb:.2f} GB, CPU cores: {num_cores}")
+        
+        if is_running_on_render():
+            # On Render, be more conservative with workers
+            # Use fewer workers based on available memory
+            if available_memory_gb < 0.5:  # Less than 512MB available
+                return 2  # Minimum workers for concurrency
+            elif available_memory_gb < 1.0:  # Less than 1GB available
+                return 3
+            else:
+                # Use a more conservative formula for Render
+                return min(4, num_cores)  # Cap at 4 workers or number of cores, whichever is smaller
+        else:
+            # For local development, use the standard formula
+            return (2 * num_cores) + 1
+    except Exception as e:
+        logger.warning(f"Error calculating optimal workers: {str(e)}. Falling back to 2 workers.")
+        return 2  # Safe fallback
+
 if __name__ == "__main__":
     try:
-        # Determine the number of workers based on CPU cores
-        # A common practice is to use (2 * num_cores) + 1
-        # This ensures efficient CPU utilization without overloading
-        num_cores = multiprocessing.cpu_count()
-        num_workers = (2 * num_cores) + 1
-        
         # Get port from environment variable (for Render) or use default 8000
         port = int(os.environ.get("PORT", 8000))
         
-        # Log server configuration
-        logger.info(f"Starting server on port {port} with {num_workers} workers (based on {num_cores} CPU cores)")
-        logger.info(f"Current working directory: {os.getcwd()}")
-        logger.info(f"Python path: {sys.path}")
+        # Determine optimal number of workers based on available resources
+        num_workers = get_optimal_workers()
         
-        # Run the server with multiple workers
-        # Using 0.0.0.0 to bind to all network interfaces
+        # Log server configuration
+        if is_running_on_render():
+            logger.info(f"Starting server on Render with {num_workers} workers (optimized for Render environment)")
+        else:
+            logger.info(f"Starting server with {num_workers} workers (local environment)")
+        
+        logger.info(f"Binding to port {port}")
+        logger.info(f"Current working directory: {os.getcwd()}")
+        
+        # Run the server with the calculated number of workers
         uvicorn.run(
             "api.main:app",
             host="0.0.0.0",

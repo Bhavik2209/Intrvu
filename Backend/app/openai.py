@@ -2,8 +2,19 @@ from openai import OpenAI
 import os
 import json
 import logging
-from typing import Dict, Any, Union
+import hashlib
+from typing import Dict, Any, Union, Optional
+from functools import lru_cache
 from dotenv import load_dotenv
+
+# LangChain imports
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnableLambda
+from langchain.cache import InMemoryCache
+from langchain.globals import set_llm_cache
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +29,13 @@ try:
 except Exception as e:
     logger.error(f"Error loading environment variables: {e}")
     raise
+
+# Setup LangChain caching
+set_llm_cache(InMemoryCache())
+
+# Initialize component extraction cache
+_component_cache = {}
+MAX_CACHE_SIZE = 50  # Maximum number of cached results
 
 def validate_api_key(api_key: str) -> None:
     """
@@ -41,12 +59,23 @@ def validate_api_key(api_key: str) -> None:
 try:
     api_key = os.getenv("OPENAI_API_KEY")
     validate_api_key(api_key)
-    client = OpenAI(api_key=api_key)
+    
+    # Initialize LangChain ChatOpenAI model
+    llm = ChatOpenAI(
+        model="gpt-3.5-turbo-16k",
+        temperature=0.1,
+        max_tokens=4000,
+        request_timeout=30.0
+    )
+    
+    # Initialize JSON parser
+    json_parser = JsonOutputParser()
+    
 except ValueError as ve:
     logger.error(f"API Key Validation Error: {ve}")
     raise
 except Exception as e:
-    logger.error(f"Error initializing OpenAI client: {e}")
+    logger.error(f"Error initializing LangChain components: {e}")
     raise
 
 def sanitize_input(text: str, max_length: int = 10000) -> str:
@@ -66,25 +95,18 @@ def sanitize_input(text: str, max_length: int = 10000) -> str:
     # Truncate to prevent extremely long inputs
     return text[:max_length].strip()
 
-def extract_components_openai(resume_text: str) -> Dict[str, Any]:
+def create_resume_extraction_chain():
     """
-    Extract structured information from resume text using OpenAI API.
+    Create a LangChain chain for resume information extraction
     
-    Args:
-        resume_text (str): The text content of the resume
-        
     Returns:
-        dict: Structured resume information or error message
+        Chain: A LangChain chain for processing resume text
     """
-    try:
-        # Input validation and sanitization
-        resume_text = sanitize_input(resume_text)
-        
-        if not resume_text or len(resume_text.strip()) < 50:
-            logger.warning("Resume text is too short")
-            return {"error": "Resume text is too short or empty"}
-        
-        prompt = '''Extract the following information from the resume text below and format it as a structured JSON:
+    # Define the system and user message templates
+    system_template = """You are a resume analysis specialist that extracts structured information from resumes and returns it as valid JSON. 
+Only respond with valid JSON, no explanations or extra text."""
+    
+    user_template = """Extract the following information from the resume text below and format it as a structured JSON:
 
 1. Personal Information: Full name, email, phone number, and location
 2. Website/Social Links: LinkedIn profile URL and any other relevant online profiles
@@ -102,43 +124,89 @@ Return the information in valid JSON format and if any section is missing so ple
 
 Resume text: {resume_text}
 
-Important: Return ONLY valid JSON without any additional text, explanations, or formatting.
-'''
-        # Call the OpenAI API with enhanced error handling
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo-16k",
-            messages=[
-                {"role": "system", "content": "You are a resume analysis specialist that extracts structured information from resumes and returns it as valid JSON. Only respond with valid JSON, no explanations or extra text."},
-                {"role": "user", "content": prompt.format(resume_text=resume_text)}
-            ],
-            temperature=0.1,
-            max_tokens=4000,
-            # Add timeout to prevent hanging
-            timeout=30.0
-        )
+Important: Return ONLY valid JSON without any additional text, explanations, or formatting."""
+    
+    # Create the prompt from templates
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_template),
+        ("user", user_template)
+    ])
+    
+    # Create the chain
+    chain = (
+        {"resume_text": RunnablePassthrough()}
+        | prompt
+        | llm
+        | RunnableLambda(lambda x: x.content)
+        | RunnableLambda(lambda x: x.replace("```json", "").replace("```", "").strip())
+        | json_parser
+    )
+    
+    return chain
+
+# Create the extraction chain once
+extraction_chain = create_resume_extraction_chain()
+
+def extract_components_openai(resume_text: str, use_cache: bool = True) -> Dict[str, Any]:
+    """
+    Extract structured information from resume text using LangChain with caching.
+    
+    Args:
+        resume_text (str): The text content of the resume
+        use_cache (bool): Whether to use caching for results
         
-        # Extract the assistant's response
-        result = response.choices[0].message.content.strip()
+    Returns:
+        dict: Structured resume information or error message
+    """
+    try:
+        # Input validation and sanitization
+        resume_text = sanitize_input(resume_text)
         
-        # Advanced JSON cleaning
-        result = result.replace("```json", "").replace("```", "").strip()
+        if not resume_text or len(resume_text.strip()) < 50:
+            logger.warning("Resume text is too short")
+            return {"error": "Resume text is too short or empty"}
         
-        # Validate JSON with more robust parsing
+        # Generate cache key if caching is enabled
+        if use_cache:
+            # Create a deterministic hash of the input
+            cache_key = hashlib.md5(resume_text.encode()).hexdigest()
+            
+            # Check if we have a cached result
+            if cache_key in _component_cache:
+                logger.info("Using cached resume components")
+                return _component_cache[cache_key]
+        
+        # Log start of extraction
+        logger.info("Starting resume component extraction with LangChain")
+        start_time = __import__("time").time()
+        
+        # Run the extraction chain
         try:
-            parsed_json = json.loads(result)
+            result = extraction_chain.invoke(resume_text)
             
             # Additional validation of parsed JSON
-            if not isinstance(parsed_json, dict):
+            if not isinstance(result, dict):
                 raise ValueError("Parsed result is not a dictionary")
             
-            return parsed_json
-        except (json.JSONDecodeError, ValueError) as json_error:
-            logger.error(f"JSON parsing error: {json_error}")
-            return {
-                "error": "Failed to parse OpenAI response as JSON",
-                "raw_response": result[:1000],
-                "error_details": str(json_error)
-            }
+            # Cache the result if caching is enabled
+            if use_cache:
+                # If cache is full, remove oldest entry
+                if len(_component_cache) >= MAX_CACHE_SIZE:
+                    oldest_key = next(iter(_component_cache))
+                    del _component_cache[oldest_key]
+                
+                # Add new result to cache
+                _component_cache[cache_key] = result
+            
+            # Log successful extraction
+            end_time = __import__("time").time()
+            logger.info(f"Resume extraction completed in {end_time - start_time:.2f} seconds")
+            
+            return result
+            
+        except Exception as chain_error:
+            logger.error(f"Error in LangChain execution: {chain_error}")
+            raise
     
     except Exception as e:
         # Comprehensive error logging

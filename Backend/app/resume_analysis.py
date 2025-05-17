@@ -1,7 +1,8 @@
 import json
 import os
 import time
-
+import logging
+import hashlib
 # Import LangChain components
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -9,6 +10,14 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain.globals import set_debug
 from langchain.cache import InMemoryCache
 from langchain_core.runnables import RunnableParallel, RunnableLambda
+
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Initialize environment variables
 api_key = os.environ.get("OPENAI_API_KEY")
@@ -617,18 +626,26 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True, version
     """Perform resume analysis using LangChain's optimized processing with caching"""
     try:
         # Generate a cache key based on resume and job description and version
+        # Generate a cache key based on resume and job description and version
         if use_cache:
             # Create a deterministic hash of the inputs including version for cache busting
             resume_str = json.dumps(resume_text, sort_keys=True)
-            combined_input = f"{resume_str}||{job_description}||{version}"
+            
+            # Normalize the job description to ensure consistent caching
+            job_desc_normalized = job_description.strip().lower()
+            
+            # Create a more robust combined input for hashing
+            combined_input = f"{resume_str}||{job_desc_normalized}||{version}"
             cache_key = hashlib.md5(combined_input.encode()).hexdigest()
-            print(f"Using cache key with version {version}")
+            
+            # Add logging to debug cache key generation
+            logger.info(f"Generated cache key: {cache_key[:8]}... for job desc length: {len(job_description)}")
             
             # Check if we have a cached result
             if cache_key in _analysis_cache:
-                print("Using cached analysis result")
+                logger.info("Using cached analysis result")
                 return _analysis_cache[cache_key]
-        
+                
         # No cache hit, perform the analysis
         start_time = time.time()
         print("Starting LangChain resume analysis...")

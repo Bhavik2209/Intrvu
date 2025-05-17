@@ -34,11 +34,12 @@ class JobData(BaseModel):
 async def root():
     return {"message": "Welcome to Resume Analysis API"}
 
-# Cache for extracted resume components
+# We now use the internal caching in the openai.py module
+# This is kept for backward compatibility
 @lru_cache(maxsize=32)
 def get_cached_components(resume_hash):
-    """Cache function to retrieve resume components by hash"""
-    return None  # Initially empty, will be populated during operation
+    """Legacy cache function - now using the enhanced caching in openai.py"""
+    return None
 
 @router.post("/api/analyze")
 async def job_analysis(
@@ -78,22 +79,13 @@ async def job_analysis(
                 detail="Resume content is too short or empty"
             )
         
-        # Calculate a hash for the resume content for caching
-        resume_hash = hash(resume_text)
+        # Extract resume components using the enhanced LangChain implementation with built-in caching
+        # Note: This only caches the resume component extraction, not the analysis which depends on job description
+        logger.info("Extracting resume components with LangChain")
+        components = extract_components_openai(resume_text, use_cache=True)
         
-        # Check if components are already in cache
-        components = get_cached_components(resume_hash)
-        
-        if components is None:
-            # Extract resume components if not in cache
-            logger.info("Extracting resume components")
-            components = extract_components_openai(resume_text)
-            
-            # Update cache
-            get_cached_components.cache_info = lambda: None  # Avoid AttributeError
-            get_cached_components.__wrapped__.__dict__[resume_hash] = components
-        else:
-            logger.info("Using cached resume components")
+        # Log the job description length to help with debugging cache issues
+        logger.info(f"Job description length: {len(validated_job_data.description)} characters")
         
         if not isinstance(components, dict):
             raise HTTPException(
@@ -101,11 +93,13 @@ async def job_analysis(
                 detail="Failed to process resume components"
             )
         
-        # Perform optimized resume analysis
+        # Perform optimized resume analysis with caching that includes job description
+        # This ensures different job descriptions get different analysis results
         logger.info("Starting resume analysis")
         analysis = detail_resume_analysis(
             components, 
-            validated_job_data.description
+            validated_job_data.description,
+            use_cache=True  # Explicitly enable caching with job-aware keys
         )
         
         # Validate analysis results

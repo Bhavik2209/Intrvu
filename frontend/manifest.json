@@ -2,10 +2,7 @@
     "name": "IntrvuFit - Resume optimizer",
     "version": "0.0.5",
     "manifest_version": 3,
-    "action": {
-        "default_width": 800,
-        "default_height": 600
-    },
+    "action": {},
     "side_panel": {
         "default_path": "popup.html"
     },

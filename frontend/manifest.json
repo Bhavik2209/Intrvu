@@ -3,13 +3,16 @@
     "version": "0.0.5",
     "manifest_version": 3,
     "action": {
-        "default_popup": "popup.html",
         "default_width": 800,
         "default_height": 600
     },
+    "side_panel": {
+        "default_path": "popup.html"
+    },
     "permissions": [
         "activeTab",
-        "scripting"
+        "scripting",
+        "sidePanel"
     ],
     "host_permissions": [
         "https://www.linkedin.com/jobs/*",

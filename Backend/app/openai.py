@@ -62,7 +62,7 @@ try:
     
     # Initialize LangChain ChatOpenAI model
     llm = ChatOpenAI(
-        model="gpt-3.5-turbo-16k",
+        model="gpt-3.5-turbo",
         temperature=0.1,
         max_tokens=4000,
         request_timeout=30.0

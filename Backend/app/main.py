@@ -142,5 +142,5 @@ async def health_check():
     return {
         "status": "ok", 
         "message": "API is running",
-        "version": "1.1.0"  # Add version tracking
+        "version": "1.2.0"  # Updated version for new scoring system
     }

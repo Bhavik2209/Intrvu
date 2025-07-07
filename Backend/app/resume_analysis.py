@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import tiktoken
 import logging
 import hashlib
 # Import LangChain components
@@ -44,6 +45,12 @@ import hashlib
 # Create a cache with a maximum size of 100 items
 _analysis_cache = {}
 MAX_CACHE_SIZE = 100
+
+def num_tokens_from_string(string, model="gpt-3.5-turbo"):
+    """Returns the number of tokens in a text string."""
+    encoding = tiktoken.encoding_for_model(model)
+    num_tokens = len(encoding.encode(string))
+    return num_tokens
 
 # Sections with mandatory and optional indicators
 resume_sections = [
@@ -141,9 +148,7 @@ def keyword_match(resume_text, job_description):
         raise ValueError("Job description or resume text is empty")
         
     prompt = f"""Given the job description: {job_description}
-
         And the resume text: {resume_text}
-
         Analyze how well the resume matches the job description. Generate a JSON response that includes a skills match score and detailed analysis. Follow these specifications:
 
         1. SCORING SYSTEM (21 POINTS TOTAL):
@@ -185,6 +190,78 @@ def keyword_match(resume_text, job_description):
    - For "missingKeywords": List only significant technical and job-related keywords not found in the resume
    - For "suggestedImprovements": Provide specific, actionable suggestions on how to incorporate missing keywords naturally into relevant resume sections based on the candidate's actual experience
 """
+
+        # Check token count and truncate if necessary
+        max_tokens = 4000  # Leave room for the completion
+        prompt_tokens = num_tokens_from_string(prompt)
+        resume_tokens = num_tokens_from_string(resume_text)
+        job_desc_tokens = num_tokens_from_string(job_description)
+        
+        if prompt_tokens + resume_tokens + job_desc_tokens > max_tokens:
+            # Truncate texts to fit within token limit
+            encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+            available_tokens = max_tokens - prompt_tokens - 100  # Extra buffer
+            
+            # Allocate tokens proportionally between resume and job description
+            resume_ratio = resume_tokens / (resume_tokens + job_desc_tokens)
+            job_desc_ratio = job_desc_tokens / (resume_tokens + job_desc_tokens)
+            
+            resume_allocated = int(available_tokens * resume_ratio)
+            job_desc_allocated = available_tokens - resume_allocated
+            
+            if resume_tokens > resume_allocated:
+                resume_encoded = encoding.encode(resume_text)
+                truncated_tokens = resume_encoded[:resume_allocated]
+                resume_text = encoding.decode(truncated_tokens)
+                print(f"Resume text truncated from {resume_tokens} to {num_tokens_from_string(resume_text)} tokens")
+            
+            if job_desc_tokens > job_desc_allocated:
+                job_desc_encoded = encoding.encode(job_description)
+                truncated_tokens = job_desc_encoded[:job_desc_allocated]
+                job_description = encoding.decode(truncated_tokens)
+                print(f"Job description truncated from {job_desc_tokens} to {num_tokens_from_string(job_description)} tokens")
+        
+        # Recreate the prompt with potentially truncated texts
+        prompt = f"""Given the job description: {job_description}
+        And the resume text: {resume_text}
+        Analyze how well the resume matches the job description. Generate a JSON response that includes a skills match score and detailed analysis. Follow these specifications:
+        1. SCORING SYSTEM (21 POINTS TOTAL):
+   - First identify and extract only relevant technical skills, job-specific qualifications, tools, methodologies, and industry-specific terminology from the job description
+   - Calculate the percentage of these meaningful job-related keywords found in the resume
+   - Assign points and ratings based on match percentage:
+       * 90%+ match: 21 points, "Excellent" rating (✅)
+       * 70-89% match: 16 points, "Good" rating (👍)
+       * 50-69% match: 11 points, "Fair" rating (⚠️)
+       * 30-49% match: 6 points, "Needs Improvement" rating (🛑)
+       * Below 30% match: 0 points, "Poor" rating (❌)
+        2. JSON STRUCTURE:
+        {
+            "score": {
+                "matchPercentage": 0,
+                "pointsAwarded": 0,
+                "rating": "rating text",
+                "ratingSymbol": "emoji"
+            },
+            "analysis": {
+                "matchedKeywords": [],
+                "missingKeywords": [],
+                "suggestedImprovements": "detailed improvement suggestions"
+            }
+        }
+    3. DETAILED ANALYSIS REQUIREMENTS:
+   - Extract ONLY relevant technical skills, qualifications, and job-specific keywords from the job description:
+     * Technical skills (programming languages, software, tools, platforms)
+     * Domain knowledge (industry-specific terminology)
+     * Methodologies (project management frameworks, development approaches)
+     * Specialized certifications or qualifications
+     * Required years of experience in specific areas
+   - Ignore common words, general job functions, and non-specific terminology
+   - For technical jobs: focus on technical skills, tools, programming languages, frameworks, methodologies
+   - For non-technical jobs: focus on domain expertise, methodologies, certifications, specialized knowledge
+   - For "matchedKeywords": List only significant technical and job-related keywords found in the resume
+   - For "missingKeywords": List only significant technical and job-related keywords not found in the resume
+   - For "suggestedImprovements": Provide specific, actionable suggestions on how to incorporate missing keywords naturally into relevant resume sections based on the candidate's actual experience
+"""
     
     response = gen_model(prompt)
     
@@ -197,7 +274,6 @@ def keyword_match(resume_text, job_description):
 
 def job_experience(resume_text, job_description):
     prompt = f"""Given the job description: {job_description}
-
         And the job experience from the resume: {resume_text}
         NOTE : if there is no job experience give the suggestions about what kind of job experience should be there in the resume according to the job desciption, 
         Analyze how well the work experience in the resume aligns with the job responsibilities. Generate a JSON response that includes a job experience alignment score and detailed analysis. Follow these specifications:
@@ -245,16 +321,92 @@ def job_experience(resume_text, job_description):
             }}
         }}"""
 
+        # Check token count and truncate if necessary
+        max_tokens = 4000  # Leave room for the completion
+        prompt_tokens = num_tokens_from_string(prompt)
+        resume_tokens = num_tokens_from_string(resume_text)
+        job_desc_tokens = num_tokens_from_string(job_description)
+        
+        if prompt_tokens + resume_tokens + job_desc_tokens > max_tokens:
+            # Truncate texts to fit within token limit
+            encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+            available_tokens = max_tokens - prompt_tokens - 100  # Extra buffer
+            
+            # Allocate tokens proportionally between resume and job description
+            resume_ratio = resume_tokens / (resume_tokens + job_desc_tokens)
+            job_desc_ratio = job_desc_tokens / (resume_tokens + job_desc_tokens)
+            
+            resume_allocated = int(available_tokens * resume_ratio)
+            job_desc_allocated = available_tokens - resume_allocated
+            
+            if resume_tokens > resume_allocated:
+                resume_encoded = encoding.encode(resume_text)
+                truncated_tokens = resume_encoded[:resume_allocated]
+                resume_text = encoding.decode(truncated_tokens)
+                print(f"Resume text truncated from {resume_tokens} to {num_tokens_from_string(resume_text)} tokens")
+            
+            if job_desc_tokens > job_desc_allocated:
+                job_desc_encoded = encoding.encode(job_description)
+                truncated_tokens = job_desc_encoded[:job_desc_allocated]
+                job_description = encoding.decode(truncated_tokens)
+                print(f"Job description truncated from {job_desc_tokens} to {num_tokens_from_string(job_description)} tokens")
+        
+        # Recreate the prompt with potentially truncated texts
+        prompt = f"""Given the job description: {job_description}
+        And the job experience from the resume: {resume_text}
+        NOTE : if there is no job experience give the suggestions about what kind of job experience should be there in the resume according to the job desciption, 
+        Analyze how well the work experience in the resume aligns with the job responsibilities. Generate a JSON response that includes a job experience alignment score and detailed analysis. Follow these specifications:
+        1. SCORING SYSTEM (18 POINTS TOTAL):
+        - Calculate the percentage of job responsibilities covered in the resume's work experience
+        - Assign points and ratings based on alignment percentage:
+            * 80%+ match: 18 points, "Strong match" rating (✅)
+            * 60-79% match: 14 points, "Good alignment" rating (👍)
+            * 40-59% match: 9 points, "Partial match" rating (⚠️)
+            * 20-39% match: 5 points, "Weak match" rating (🛑)
+            * Below 20% match: 0 points, "No relevant experience" rating (❌)
+        2. JSON STRUCTURE:
+        {
+            "score": {
+                "alignmentPercentage": 0,
+                "pointsAwarded": 0,
+                "rating": "rating text",
+                "ratingSymbol": "emoji"
+            },
+            "analysis": {
+                "strongMatches": [
+                    {
+                        "responsibility": "job responsibility",
+                        "status": "Strong Match",
+                        "notes": "specific experience from resume"
+                    }
+                ],
+                "partialMatches": [
+                    {
+                        "responsibility": "job responsibility",
+                        "status": "Partial Match",
+                        "notes": "limited experience mentioned"
+                    }
+                ],
+                "missingExperience": [
+                    {
+                        "responsibility": "job responsibility",
+                        "status": "Missing",
+                        "notes": "Not mentioned in resume"
+                    }
+                ],
+                "suggestedImprovements": "detailed improvement suggestions"
+            }
+        }
+"""
+
     response = gen_model(prompt)
     return response
 
 def skills_certifications(certifications,skills, job_description):
     prompt = f'''Given the job description: {job_description}, these are the certifications: {certifications} and these are skills present in the resume: {skills}.
-
 Analyze how well the skills, education, and certifications in the resume match the requirements in the job description. Generate a JSON response that includes a comprehensive match score and detailed analysis. Follow these specifications:
 
 NOTE: This analysis should cover BOTH education/certifications AND technical/soft skills components, which together account for 35% of the Job Fit Score (21 points total).
-
 1. SKILLS & EDUCATION EXTRACTION PROCESS:
    - First, carefully extract from the job description:
      * Required technical skills, tools, technologies, and methodologies
@@ -345,8 +497,147 @@ NOTE: This analysis should cover BOTH education/certifications AND technical/sof
    - For "certificationMatch": Identify whether required certifications are listed in the resume
    - For "suggestedImprovements": Provide actionable suggestions for incorporating missing critical skills, education requirements, and certifications
 '''
-    
 
+        # Check token count and truncate if necessary
+        max_tokens = 4000  # Leave room for the completion
+        prompt_tokens = num_tokens_from_string(prompt)
+        skills_tokens = num_tokens_from_string(str(skills))
+        certifications_tokens = num_tokens_from_string(str(certifications))
+        job_desc_tokens = num_tokens_from_string(job_description)
+        
+        total_tokens = prompt_tokens + skills_tokens + certifications_tokens + job_desc_tokens
+        
+        if total_tokens > max_tokens:
+            # Truncate texts to fit within token limit
+            encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+            available_tokens = max_tokens - prompt_tokens - 100  # Extra buffer
+            
+            # Allocate tokens proportionally
+            total_input_tokens = skills_tokens + certifications_tokens + job_desc_tokens
+            
+            if total_input_tokens > available_tokens:
+                # Prioritize job description as it's most important
+                job_desc_allocated = min(job_desc_tokens, int(available_tokens * 0.6))
+                remaining_tokens = available_tokens - job_desc_allocated
+                
+                # Split remaining tokens between skills and certifications
+                skills_ratio = skills_tokens / (skills_tokens + certifications_tokens) if (skills_tokens + certifications_tokens) > 0 else 0.5
+                skills_allocated = int(remaining_tokens * skills_ratio)
+                certifications_allocated = remaining_tokens - skills_allocated
+                
+                # Truncate job description if needed
+                if job_desc_tokens > job_desc_allocated:
+                    job_desc_encoded = encoding.encode(job_description)
+                    truncated_tokens = job_desc_encoded[:job_desc_allocated]
+                    job_description = encoding.decode(truncated_tokens)
+                    print(f"Job description truncated from {job_desc_tokens} to {num_tokens_from_string(job_description)} tokens")
+                
+                # Truncate skills if needed (this is trickier since it's a list/dict)
+                if skills_tokens > skills_allocated and isinstance(skills, list):
+                    # Simple approach: keep removing items until under limit
+                    while num_tokens_from_string(str(skills)) > skills_allocated and skills:
+                        skills.pop()
+                    print(f"Skills truncated to fit token limit")
+                
+                # Truncate certifications if needed
+                if certifications_tokens > certifications_allocated and isinstance(certifications, list):
+                    # Simple approach: keep removing items until under limit
+                    while num_tokens_from_string(str(certifications)) > certifications_allocated and certifications:
+                        certifications.pop()
+                    print(f"Certifications truncated to fit token limit")
+        
+        # Recreate the prompt with potentially truncated texts
+        prompt = f'''Given the job description: {job_description}, these are the certifications: {certifications} and these are skills present in the resume: {skills}.
+Analyze how well the skills, education, and certifications in the resume match the requirements in the job description. Generate a JSON response that includes a comprehensive match score and detailed analysis. Follow these specifications:
+NOTE: This analysis should cover BOTH education/certifications AND technical/soft skills components, which together account for 35% of the Job Fit Score (21 points total).
+1. SKILLS & EDUCATION EXTRACTION PROCESS:
+   - First, carefully extract from the job description:
+     * Required technical skills, tools, technologies, and methodologies
+     * Required education level and field of study
+     * Required certifications and qualifications
+     * Domain-specific knowledge requirements
+   - Focus on keywords that represent actual competencies employers seek
+   - Do NOT include random phrases, job responsibilities, or generic terms
+2. STRICT MATCHING PROCEDURE:
+   - Create separate arrays for required skills, education, and certifications
+   - For each item, check if it EXACTLY appears in the resume or has a direct semantic equivalent
+   - Only mark an item as "matched" if it definitely exists in the resume
+   - Be extremely conservative - when in doubt, mark as "not matched"
+   - Double-check all matches to ensure no false positives
+3. SCORING SYSTEM (21 POINTS TOTAL):
+   - Education & Certifications (12 points):
+     * 90%+ match: 12 points, "Excellent" rating (✅)
+     * 70-89% match: 9 points, "Good" rating (👍)
+     * 50-69% match: 6 points, "Fair" rating (⚠️)
+     * 30-49% match: 3 points, "Needs Improvement" rating (🛑)
+     * Below 30% match: 0 points, "Poor" rating (❌)
+   - Skills & Tools Relevance (9 points):
+     * 90%+ match: 9 points, "Excellent" rating (✅)
+     * 70-89% match: 7 points, "Good" rating (👍)
+     * 50-69% match: 5 points, "Fair" rating (⚠️)
+     * 30-49% match: 2 points, "Needs Improvement" rating (🛑)
+     * Below 30% match: 0 points, "Poor" rating (❌)
+      
+        4. JSON STRUCTURE:
+        {{
+            "score": {{
+            "matchPercentage": [percentage],         // Original field for backward compatibility
+            "educationMatchPercentage": [percentage],  // For education & certifications
+            "educationPointsAwarded": [points],       // Out of 12 points
+            "educationRating": "[rating text]",
+            "educationRatingSymbol": "[emoji]",
+            "skillsMatchPercentage": [percentage],    // For skills & tools
+            "skillsPointsAwarded": [points],         // Out of 9 points
+            "skillsRating": "[rating text]",
+            "skillsRatingSymbol": "[emoji]",
+            "totalPointsAwarded": [points],          // Combined total (max 21)
+            "totalMatchPercentage": [percentage],    // Overall match percentage
+            "pointsAwarded": [points],              // Keep this for backward compatibility
+            "rating": "[overall rating text]",
+            "ratingSymbol": "[overall emoji]"
+            }},
+            "analysis": {{
+            "matchedSkills": [
+                {{
+                "skill": "[skill name]",
+                "status": "Found in Resume",
+                "symbol": "✅"
+                }}
+            ],
+            "missingSkills": [
+                {{
+                "skill": "[skill name which are not present in resume skills]",
+                "status": "Not Found",
+                "symbol": "❌"
+                }}
+            ],
+            "educationMatch": [
+                {{
+                "requirement": "[education requirement from job]",
+                "status": "Found/Not Found",
+                "symbol": "🎓/❌"
+                }}
+            ],
+            "certificationMatch": [
+                {{
+                "certification": "[certification name that should be there and that is there (present and not present both)]",
+                "status": "Found/Not Found",
+                "symbol": "🎓/❌"
+                }}
+            ],
+            "suggestedImprovements": "[detailed improvement suggestions]"
+            }}
+        }}
+        5. DETAILED ANALYSIS REQUIREMENTS:
+   - Extract ONLY legitimate technical skills, methodologies, education requirements, and qualifications from the job description
+   - Compare with skills, education, and certifications listed in the resume using both exact and semantic matching
+   - For "matchedSkills": List ONLY skills that are DEFINITELY present in the resume skills list
+   - For "missingSkills": Include ONLY skills specifically mentioned as requirements in the job description but missing from the resume
+   - For "educationMatch": Identify whether required education levels and fields of study are met in the resume
+   - For "certificationMatch": Identify whether required certifications are listed in the resume
+   - For "suggestedImprovements": Provide actionable suggestions for incorporating missing critical skills, education requirements, and certifications
+'''
+    
     response = gen_model(prompt)
 
     return response
@@ -436,7 +727,6 @@ def resume_structure(sections):
 
 def action_words(resume_text, job_description):
     prompt = f'''Given the resume text: {resume_text}
-
         Analyze the use of strong, impactful action verbs in the resume. Generate a JSON response that includes an action words usage score and detailed analysis. Follow these specifications:
 
         1. SCORING SYSTEM (10 POINTS TOTAL):
@@ -492,6 +782,77 @@ def action_words(resume_text, job_description):
         - For "weakActionVerbs": Identify bullet points with mediocre verbs and suggest stronger alternatives
         - For "missingActionVerbs": Highlight phrases that lack action verbs and provide rewrites
         - For "suggestedImprovements": Provide a summary of how to improve the resume's impact through better verb usage'''
+
+        # Check token count and truncate if necessary
+        max_tokens = 4000  # Leave room for the completion
+        prompt_tokens = num_tokens_from_string(prompt)
+        resume_tokens = num_tokens_from_string(resume_text)
+        
+        if prompt_tokens + resume_tokens > max_tokens:
+            # Truncate resume text to fit within token limit
+            encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+            available_tokens = max_tokens - prompt_tokens - 100  # Extra buffer
+            
+            resume_encoded = encoding.encode(resume_text)
+            truncated_tokens = resume_encoded[:available_tokens]
+            resume_text = encoding.decode(truncated_tokens)
+            print(f"Resume text truncated from {resume_tokens} to {num_tokens_from_string(resume_text)} tokens")
+        
+        # Recreate the prompt with potentially truncated text
+        prompt = f'''Given the resume text: {resume_text}
+        Analyze the use of strong, impactful action verbs in the resume. Generate a JSON response that includes an action words usage score and detailed analysis. Follow these specifications:
+        1. SCORING SYSTEM (10 POINTS TOTAL):
+        - Calculate the percentage of bullet points or experience descriptions that begin with strong action verbs
+        - Identify weak verbs that could be replaced with stronger alternatives
+        - Assign points based on percentage of strong action verbs used:
+            * 80%+ strong action words: 10 points (✅)
+            * 60-79% strong action words: 7 points (👍)
+            * 40-59% strong action words: 4 points (⚠️)
+            * Below 40% strong action words: 2 points (🛑)
+        2. JSON STRUCTURE:
+        {
+            "score": {
+            "actionVerbPercentage": [percentage],
+            "pointsAwarded": [points],
+            "ratingSymbol": "[emoji]"
+            },
+            "analysis": {
+            "strongActionVerbs": [
+                {
+                "bulletPoint": "[text from resume]",
+                "status": "Strong Action Word",
+                "actionVerb": "[identified action verb]",
+                "symbol": "✅"
+                }
+            ],
+            "weakActionVerbs": [
+                {
+                "bulletPoint": "[text from resume]",
+                "status": "Weak Action Word",
+                "actionVerb": "[identified weak verb]",
+                "suggestedReplacement": "[stronger alternative]",
+                "symbol": "⚠️"
+                }
+            ],
+            "missingActionVerbs": [
+                {
+                "bulletPoint": "[text from resume]",
+                "status": "No Action Word",
+                "suggestedReplacement": "[suggested rewrite with action verb]",
+                "symbol": "❌"
+                }
+            ],
+            "suggestedImprovements": "[summary of recommended changes]"
+            }
+        }
+        3. DETAILED ANALYSIS REQUIREMENTS:
+        - Identify all bullet points and experience descriptions in the resume
+        - For each item, determine if it starts with a strong action verb, a weak verb, or no action verb
+        - For "strongActionVerbs": List all bullet points that begin with strong, impactful verbs
+        - For "weakActionVerbs": Identify bullet points with mediocre verbs and suggest stronger alternatives
+        - For "missingActionVerbs": Highlight phrases that lack action verbs and provide rewrites
+        - For "suggestedImprovements": Provide a summary of how to improve the resume's impact through better verb usage
+'''
     
     response = gen_model(prompt)
 
@@ -499,12 +860,10 @@ def action_words(resume_text, job_description):
 
 def measurable_results(resume_text, job_description):
     prompt = f'''Given the resume text: {resume_text}
-
 Analyze whether the resume includes quantifiable metrics and measurable results. Generate a JSON response that identifies existing measurable results and provides suggestions for adding more. Follow these specifications:
 
 Example of a MEASURABLE result:  
 "Increased sales by 30%" : ✅ Yes (Contains specific metric)
-
 Example of a NON-MEASURABLE result:
 "Managed team operations" : ❌ No (Add specific metric, e.g., "Managed team operations for 15-person department, increasing efficiency by 25%")
 
@@ -549,6 +908,69 @@ Example of a NON-MEASURABLE result:
    - For "measurableResults": List only instances where the resume already includes clear, quantifiable metrics **FROM THE PROVIDED  resume_text **
    - For "opportunitiesForMetrics": Identify statements that need specific quantifiable results and suggest exactly what metrics to add **FROM THE PROVIDED  resume_text **
    - For "suggestedImprovements": Provide actionable recommendations for adding metrics to strengthen the resume's impact **BASED ON THE ANALYSIS OF THE PROVIDED  resume_text **'''
+
+        # Check token count and truncate if necessary
+        max_tokens = 4000  # Leave room for the completion
+        prompt_tokens = num_tokens_from_string(prompt)
+        resume_tokens = num_tokens_from_string(resume_text)
+        
+        if prompt_tokens + resume_tokens > max_tokens:
+            # Truncate resume text to fit within token limit
+            encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+            available_tokens = max_tokens - prompt_tokens - 100  # Extra buffer
+            
+            resume_encoded = encoding.encode(resume_text)
+            truncated_tokens = resume_encoded[:available_tokens]
+            resume_text = encoding.decode(truncated_tokens)
+            print(f"Resume text truncated from {resume_tokens} to {num_tokens_from_string(resume_text)} tokens")
+        
+        # Recreate the prompt with potentially truncated text
+        prompt = f'''Given the resume text: {resume_text}
+Analyze whether the resume includes quantifiable metrics and measurable results. Generate a JSON response that identifies existing measurable results and provides suggestions for adding more. Follow these specifications:
+Example of a MEASURABLE result:  
+"Increased sales by 30%" : ✅ Yes (Contains specific metric)
+Example of a NON-MEASURABLE result:
+"Managed team operations" : ❌ No (Add specific metric, e.g., "Managed team operations for 15-person department, increasing efficiency by 25%")
+1. SCORING SYSTEM (10 POINTS TOTAL):
+   - ONLY count instances where the resume explicitly includes specific, quantifiable metrics (percentages, numbers, time periods, dollar amounts) **FOUND WITHIN THE PROVIDED {resume_text}**
+   - DO NOT count vague statements or achievements without specific measurements
+   - Assign points based on the number of measurable results:
+      * 5+ measurable results: 10 points (✅)
+      * 3-4 measurable results: 7 points (👍)
+      * 1-2 measurable results: 4 points (⚠️)
+      * 0 measurable results: 0 points (❌)
+2. JSON STRUCTURE:
+   {
+      "score": {
+         "measurableResultsCount": [number],
+         "pointsAwarded": [points],
+         "ratingSymbol": "[emoji]"
+      },
+      "analysis": {
+         "measurableResults": [
+            {
+               "bulletPoint": "[exact text from resume]",
+               "metric": "[identified specific metric]",
+               "symbol": "✅"
+            }
+         ],
+         "opportunitiesForMetrics": [
+            {
+               "bulletPoint": "[exact text from resume]",
+               "suggestion": "[how to add a specific metric]",
+               "symbol": "❌"
+            }
+         ],
+         "suggestedImprovements": "[summary of recommendations for adding specific metrics]"
+      }
+   }
+3. DETAILED ANALYSIS REQUIREMENTS:
+   - Find any measurable results that already exist **IN THE PROVIDED resume_text **
+   - Provide specific suggestions for adding measurable results to statements that lack them **WITHIN THE PROVIDED  resume_text **
+   - For "measurableResults": List only instances where the resume already includes clear, quantifiable metrics **FROM THE PROVIDED  resume_text **
+   - For "opportunitiesForMetrics": Identify statements that need specific quantifiable results and suggest exactly what metrics to add **FROM THE PROVIDED  resume_text **
+   - For "suggestedImprovements": Provide actionable recommendations for adding metrics to strengthen the resume's impact **BASED ON THE ANALYSIS OF THE PROVIDED  resume_text **
+'''
             
     response = gen_model(prompt)
 
@@ -556,7 +978,6 @@ Example of a NON-MEASURABLE result:
 
 def bullet_point_effectiveness(resume_text):
     prompt = f'''Given the resume text: {resume_text}
-
         Analyze the effectiveness of bullet points in the resume: , evaluating their conciseness and impact. Generate a JSON response that includes a bullet point effectiveness score and detailed analysis. Follow these specifications:
 
         1. SCORING SYSTEM (8 POINTS TOTAL):
@@ -609,6 +1030,74 @@ def bullet_point_effectiveness(resume_text):
         - For "effectiveBullets": List bullet points that meet the criteria with their strengths
         - For "ineffectiveBullets": Identify problematic bullet points, explain issues, and provide revised versions
         - For "suggestedImprovements": Provide actionable advice for improving the overall quality of bullet points'''
+
+        # Check token count and truncate if necessary
+        max_tokens = 4000  # Leave room for the completion
+        prompt_tokens = num_tokens_from_string(prompt)
+        resume_tokens = num_tokens_from_string(resume_text)
+        
+        if prompt_tokens + resume_tokens > max_tokens:
+            # Truncate resume text to fit within token limit
+            encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+            available_tokens = max_tokens - prompt_tokens - 100  # Extra buffer
+            
+            resume_encoded = encoding.encode(resume_text)
+            truncated_tokens = resume_encoded[:available_tokens]
+            resume_text = encoding.decode(truncated_tokens)
+            print(f"Resume text truncated from {resume_tokens} to {num_tokens_from_string(resume_text)} tokens")
+        
+        # Recreate the prompt with potentially truncated text
+        prompt = f'''Given the resume text: {resume_text}
+        Analyze the effectiveness of bullet points in the resume: , evaluating their conciseness and impact. Generate a JSON response that includes a bullet point effectiveness score and detailed analysis. Follow these specifications:
+        1. SCORING SYSTEM (8 POINTS TOTAL):
+        - Evaluate each bullet point for:
+            * Conciseness (ideally 8-15 words)
+            * Specificity (clear, not vague)
+            * Impact (demonstrates value or achievement)
+            * Structure (begins with action verb)
+        - Calculate the percentage of bullet points meeting effectiveness criteria
+        - Assign points based on percentage of effective bullet points:
+            * 90%+ bullets effective: 8 points (✅)
+            * 70-89% bullets effective: 6 points (👍)
+            * 50-69% bullets effective: 4 points (⚠️)
+            * Below 50% bullets effective: 2 points (🛑)
+        2. JSON STRUCTURE:
+        {
+            "score": {
+            "effectiveBulletPercentage": [percentage],
+            "pointsAwarded": [points],
+            "ratingSymbol": "[emoji]"
+            },
+            "analysis": {
+            "effectiveBullets": [
+                {
+                "bulletPoint": "[take text from resume]",
+                "wordCount": [number],
+                "status": "Effective",
+                "strengths": "[what makes it effective]",
+                "symbol": "✅"
+                }
+            ],
+            "ineffectiveBullets": [
+                {
+                "bulletPoint": "[take text from resume]",
+                "wordCount": [number],
+                "status": "Ineffective",
+                "issues": "[identified problems]",
+                "suggestedRevision": "[improved version]",
+                "symbol": "❌"
+                }
+            ],
+            "suggestedImprovements": "[summary of how to improve bullet points]"
+            }
+        }
+        3. DETAILED ANALYSIS REQUIREMENTS:
+        - Identify all bullet points in the resume
+        - Evaluate each bullet point based on the criteria listed above
+        - For "effectiveBullets": List bullet points that meet the criteria with their strengths
+        - For "ineffectiveBullets": Identify problematic bullet points, explain issues, and provide revised versions
+        - For "suggestedImprovements": Provide actionable advice for improving the overall quality of bullet points
+'''
     
     response = gen_model(prompt)
 

@@ -2,7 +2,6 @@ from openai import OpenAI
 import os
 import json
 import logging
-import tiktoken
 import hashlib
 from typing import Dict, Any, Union, Optional
 from functools import lru_cache
@@ -33,12 +32,6 @@ except Exception as e:
 
 # Setup LangChain caching
 set_llm_cache(InMemoryCache())
-
-def num_tokens_from_string(string, model="gpt-3.5-turbo"):
-    """Returns the number of tokens in a text string."""
-    encoding = tiktoken.encoding_for_model(model)
-    num_tokens = len(encoding.encode(string))
-    return num_tokens
 
 # Initialize component extraction cache
 _component_cache = {}
@@ -169,7 +162,7 @@ def extract_components_openai(resume_text: str, use_cache: bool = True) -> Dict[
         # Input validation and sanitization
         resume_text = sanitize_input(resume_text)
         
-        if not resume_text or len(resume_text.strip()) < 10:
+        if not resume_text or len(resume_text.strip()) < 50:
             logger.warning("Resume text is too short")
             return {"error": "Resume text is too short or empty"}
         
@@ -190,7 +183,7 @@ def extract_components_openai(resume_text: str, use_cache: bool = True) -> Dict[
         # Run the extraction chain
         try:
             result = extraction_chain.invoke(resume_text)
-
+            
             # Additional validation of parsed JSON
             if not isinstance(result, dict):
                 raise ValueError("Parsed result is not a dictionary")
@@ -213,86 +206,8 @@ def extract_components_openai(resume_text: str, use_cache: bool = True) -> Dict[
             
         except Exception as chain_error:
             logger.error(f"Error in LangChain execution: {chain_error}")
-            
-            # Fallback to direct API call if LangChain fails
-            try:
-                logger.info("Falling back to direct OpenAI API call")
-                
-                system_prompt = """You are a resume analysis specialist that extracts structured information from resumes and returns it as valid JSON. 
-Only respond with valid JSON, no explanations or extra text."""
-                
-                user_prompt = """Extract the following information from the resume text below and format it as a structured JSON:
-
-1. Personal Information: Full name, email, phone number, and location
-2. Website/Social Links: LinkedIn profile URL and any other relevant online profiles
-3. Professional Summary: Create a concise, clear, and impactful summary (max 2-3 sentences)
-4. Work Experience: For each position, extract company name, job title, dates, location, and key responsibilities/achievements
-5. Education: For each degree, include institution name, degree title, field of study, and graduation date
-6. Certifications: List all professional certifications with names, issuing organizations, and dates
-7. Awards/Achievements: List all honors with titles, issuing organizations, and dates
-8. Projects: Include project names, descriptions, your role, technologies used, and outcomes
-9. Skills and Interests: List technical skills, soft skills, languages, and personal interests
-10. Volunteering: Include organization names, roles, dates, and key contributions
-11. Publications: Include titles, publication venues, dates, and co-authors if applicable
-
-Return the information in valid JSON format and if any section is missing so please add that section with empty list like [].
-
-Resume text: {resume_text}
-
-Important: Return ONLY valid JSON without any additional text, explanations, or formatting."""
-                
-                # Check token count and truncate if necessary
-                max_tokens = 4000  # Leave room for the completion
-                system_tokens = num_tokens_from_string(system_prompt)
-                user_tokens = num_tokens_from_string(user_prompt)
-                resume_tokens = num_tokens_from_string(resume_text)
-                
-                if system_tokens + user_tokens + resume_tokens > max_tokens:
-                    # Truncate resume text to fit within token limit
-                    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-                    resume_encoded = encoding.encode(resume_text)
-                    truncated_tokens = resume_encoded[:max_tokens - system_tokens - user_tokens - 100]  # Extra buffer
-                    resume_text = encoding.decode(truncated_tokens)
-                    logger.info(f"Resume text truncated from {resume_tokens} to {num_tokens_from_string(resume_text)} tokens")
-                
-                # Format the prompt with the resume text
-                formatted_user_prompt = user_prompt.format(resume_text=resume_text)
-                
-                response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": formatted_user_prompt}
-                    ],
-                    temperature=0.1,
-                    max_tokens=4000,
-                    request_timeout=30.0
-                )
-                
-                # Extract and sanitize the response
-                content = response.choices[0].message.content.strip()
-                # Remove any markdown code block indicators if present
-                content = content.replace("```json", "").replace("```", "").strip()
-                
-                try:
-                    result = json.loads(content)
-                    
-                    # Cache the result if caching is enabled
-                    if use_cache:
-                        if len(_component_cache) >= MAX_CACHE_SIZE:
-                            oldest_key = next(iter(_component_cache))
-                            del _component_cache[oldest_key]
-                        _component_cache[cache_key] = result
-                    
-                    logger.info("Successfully extracted resume components using direct API call")
-                    return result
-                except json.JSONDecodeError as json_err:
-                    logger.error(f"Failed to parse JSON from API response: {json_err}")
-                    return {"error": "Failed to parse resume data", "details": str(json_err)}
-            except Exception as api_err:
-                logger.error(f"Direct API call also failed: {api_err}")
-                raise
-            
+            raise
+    
     except Exception as e:
         # Comprehensive error logging
         logger.error(f"Resume analysis error: {e}", exc_info=True)

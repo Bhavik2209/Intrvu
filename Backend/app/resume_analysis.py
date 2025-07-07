@@ -30,7 +30,7 @@ set_llm_cache(InMemoryCache())
 
 # Create LLM instance with caching enabled
 llm = ChatOpenAI(
-    model="gpt-4",
+    model="gpt-4.1",
     temperature=0.3,
     max_tokens=8000,  # Increased token limit for more detailed responses
     api_key=api_key
@@ -146,7 +146,7 @@ def keyword_match(resume_text, job_description):
 
         Analyze how well the resume matches the job description. Generate a JSON response that includes a skills match score and detailed analysis. Follow these specifications:
 
-        1. SCORING SYSTEM (21 POINTS TOTAL):
+        1. SCORING SYSTEM:
    - First identify and extract only relevant technical skills, job-specific qualifications, tools, methodologies, and industry-specific terminology from the job description
    - Calculate the percentage of these meaningful job-related keywords found in the resume
    - Assign points and ratings based on match percentage:
@@ -202,7 +202,7 @@ def job_experience(resume_text, job_description):
         NOTE : if there is no job experience give the suggestions about what kind of job experience should be there in the resume according to the job desciption, 
         Analyze how well the work experience in the resume aligns with the job responsibilities. Generate a JSON response that includes a job experience alignment score and detailed analysis. Follow these specifications:
 
-        1. SCORING SYSTEM (18 POINTS TOTAL):
+        1. SCORING SYSTEM:
         - Calculate the percentage of job responsibilities covered in the resume's work experience
         - Assign points and ratings based on alignment percentage:
             * 80%+ match: 18 points, "Strong match" rating (✅)
@@ -439,7 +439,7 @@ def action_words(resume_text, job_description):
 
         Analyze the use of strong, impactful action verbs in the resume. Generate a JSON response that includes an action words usage score and detailed analysis. Follow these specifications:
 
-        1. SCORING SYSTEM (10 POINTS TOTAL):
+        1. SCORING SYSTEM:
         - Calculate the percentage of bullet points or experience descriptions that begin with strong action verbs
         - Identify weak verbs that could be replaced with stronger alternatives
         - Assign points based on percentage of strong action verbs used:
@@ -508,7 +508,7 @@ Example of a MEASURABLE result:
 Example of a NON-MEASURABLE result:
 "Managed team operations" : ❌ No (Add specific metric, e.g., "Managed team operations for 15-person department, increasing efficiency by 25%")
 
-1. SCORING SYSTEM (10 POINTS TOTAL):
+1. SCORING SYSTEM:
    - ONLY count instances where the resume explicitly includes specific, quantifiable metrics (percentages, numbers, time periods, dollar amounts) **FOUND WITHIN THE PROVIDED {resume_text}**
    - DO NOT count vague statements or achievements without specific measurements
    - Assign points based on the number of measurable results:
@@ -559,7 +559,7 @@ def bullet_point_effectiveness(resume_text):
 
         Analyze the effectiveness of bullet points in the resume: , evaluating their conciseness and impact. Generate a JSON response that includes a bullet point effectiveness score and detailed analysis. Follow these specifications:
 
-        1. SCORING SYSTEM (8 POINTS TOTAL):
+        1. SCORING SYSTEM:
         - Evaluate each bullet point for:
             * Conciseness (ideally 8-15 words)
             * Specificity (clear, not vague)
@@ -835,7 +835,7 @@ def overall_score(score1, score2, score3, score4, score5, score6, score7):
         # Define the correct maximum points for each component
         max_keyword_points = 21       # Keyword & Contextual Match (35% of Job Fit = 21 pts)
         max_experience_points = 18     # Experience Alignment (30% of Job Fit = 18 pts)
-        max_skills_cert_points = 21    # Combined Skills & Certifications (35% of Job Fit = 21 pts)
+        max_skills_cert_points = 21    # Combined Skills & Certifications (21 pts total)
         max_structure_points = 12      # Resume Structure (30% of Resume Quality = 12 pts)
         max_action_words_points = 10   # Action Words Usage (25% of Resume Quality = 10 pts)
         max_measurable_results_points = 10  # Measurable Results (25% of Resume Quality = 10 pts)
@@ -852,7 +852,7 @@ def overall_score(score1, score2, score3, score4, score5, score6, score7):
         s6 = float(score6) if score6 is not None else 0  # Measurable Results
         s7 = float(score7) if score7 is not None else 0  # Bullet Point Effectiveness
         
-        # Calculate Job Fit Score (60% of total = 60 points)
+        # Calculate Job Fit Score (60% of total)
         # For the Skills & Certifications component (s3), we need to split it into:
         # - Education & Certifications (20% of Job Fit = 12 pts)
         # - Skills & Tools Relevance (15% of Job Fit = 9 pts)
@@ -864,7 +864,7 @@ def overall_score(score1, score2, score3, score4, score5, score6, score7):
         # Calculate total Job Fit Score (60 pts)
         job_fit_score = s1 + s2 + education_score + skills_score
         
-        # Calculate Resume Quality Score (40% of total = 40 points)
+        # Calculate Resume Quality Score (40% of total)
         resume_quality_score = s4 + s5 + s6 + s7
         
         # Return combined score rounded to the nearest integer

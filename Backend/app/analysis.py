@@ -1,6 +1,7 @@
 from openai import OpenAI
 import re
 import os
+import tiktoken
 import numpy as np
 from dotenv import load_dotenv
 from sklearn.metrics.pairwise import cosine_similarity
@@ -11,6 +12,12 @@ load_dotenv()
 
 # Initialize the OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+def num_tokens_from_string(string, model="gpt-3.5-turbo"):
+    """Returns the number of tokens in a text string."""
+    encoding = tiktoken.encoding_for_model(model)
+    num_tokens = len(encoding.encode(string))
+    return num_tokens
 
 class ResumeAnalyzer:
     def __init__(self, resume_text, job_description_text):
@@ -82,8 +89,6 @@ class ResumeAnalyzer:
     def analyze_job_requirements(self):
         """Analyze job description to extract requirements"""
         try:
-            prompt = """Analyze this job description and extract key requirements:
-
             1. Required technical skills and keywords (specific tools, technologies, methodologies)
             2. Required experience (years, type, level)
             3. Required skills and certifications
@@ -95,17 +100,41 @@ class ResumeAnalyzer:
             Format as JSON with these exact keys:
             {
                 "keywords": [],
-                "experience": {},
+                "experience": [],
                 "skills": [],
                 "certifications": [],
-                "education": {},
+                "education": [],
                 "soft_skills": [],
                 "achievements": [],
                 "required_sections": []
             }
 
-            Job Description: {self.job_desc}"""
+            # Check token count and truncate if necessary
+            # Check token count and truncate if necessary
+            max_tokens = 4000  # Leave room for the completion
+            prompt_tokens = num_tokens_from_string(prompt)
+            job_desc_tokens = num_tokens_from_string(self.job_desc)
+            
+            if prompt_tokens + job_desc_tokens > max_tokens:
+                # Truncate job description to fit within token limit
+                encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+                job_desc_encoded = encoding.encode(self.job_desc)
+                truncated_tokens = job_desc_encoded[:max_tokens - prompt_tokens - 100]  # Extra buffer
+                self.job_desc = encoding.decode(truncated_tokens)
+                print(f"Job description truncated from {job_desc_tokens} to {num_tokens_from_string(self.job_desc)} tokens")
 
+            max_tokens = 4000  # Leave room for the completion
+            prompt_tokens = num_tokens_from_string(prompt)
+            job_desc_tokens = num_tokens_from_string(self.job_desc)
+            
+            if prompt_tokens + job_desc_tokens > max_tokens:
+                # Truncate job description to fit within token limit
+                encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+                job_desc_encoded = encoding.encode(self.job_desc)
+                truncated_tokens = job_desc_encoded[:max_tokens - prompt_tokens - 100]  # Extra buffer
+                self.job_desc = encoding.decode(truncated_tokens)
+                print(f"Job description truncated from {job_desc_tokens} to {num_tokens_from_string(self.job_desc)} tokens")
+            
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -134,7 +163,7 @@ class ResumeAnalyzer:
             
             # Calculate structure score (15 points max)
             structure_score = round((present_sections / total_sections) * 15)
-            
+
             # Check ATS readability
             ats_issues = []
             
@@ -156,9 +185,9 @@ class ResumeAnalyzer:
         """Analyze bullet point effectiveness"""
         try:
             # Extract bullet points
-            bullet_points = re.findall(r'[•\-]\s*(.*?)(?:\n|$)', self.resume)
+            bullet_points = re.findall(r'[•\-]\s*(.*?)(?:\n|$)', self.resume or "")
             if not bullet_points:
-                bullet_points = [s.strip() for s in re.split(r'\.\s+', self.resume) if s.strip()]
+                bullet_points = [s.strip() for s in re.split(r'\.\s+', self.resume or "") if s.strip()]
             
             total_points = len(bullet_points)
             if total_points == 0:

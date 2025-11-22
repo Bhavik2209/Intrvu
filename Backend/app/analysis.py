@@ -9,6 +9,7 @@ import json
 # Load environment variables
 load_dotenv()
 
+
 # Initialize the OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 

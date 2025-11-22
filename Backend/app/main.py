@@ -112,7 +112,18 @@ async def job_analysis(
         # Log successful analysis
         process_time = time.time() - start_time
         logger.info(f"Successful resume analysis completed in {process_time:.2f} seconds")
-        
+        print(analysis)
+
+        with open("output.json", "w") as f:
+            json.dump({
+                "job_context": {
+                    "title": validated_job_data.jobTitle or "Job Position",
+                    "company": validated_job_data.company or "Company",
+                    "description_length": len(validated_job_data.description)
+                },
+                "analysis": analysis,
+                "process_time_seconds": round(process_time, 2)
+            }, f)
         return {
             "job_context": {
                 "title": validated_job_data.jobTitle or "Job Position",

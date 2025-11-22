@@ -1,467 +1,500 @@
-from openai import OpenAI
-import re
-import os
-import numpy as np
-from dotenv import load_dotenv
-from sklearn.metrics.pairwise import cosine_similarity
 import json
+import os
+import time
+import logging
+import hashlib
+# Import LangChain components
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+from langchain.globals import set_debug
+from langchain.cache import InMemoryCache
+from langchain_core.runnables import RunnableParallel, RunnableLambda
 
-# Load environment variables
-load_dotenv()
+from .action_words import action_words
+from .keyword_match import keyword_match
+from .job_experience import job_experience
+from .education_and_certifications import education_certifications
+from .resume_analysis import resume_structure
+from .measurable_results import measurable_results
+from .bullet_point_effectiveness import bullet_point_effectiveness
+from openai_model import gen_model
 
 
-# Initialize the OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-class ResumeAnalyzer:
-    def __init__(self, resume_text, job_description_text):
-        self.resume = resume_text
-        self.job_desc = job_description_text
-        
-        # Define all possible resume sections
-        self.all_sections = {
-            'Personal Information': False,
-            'Website and Social Links': False,
-            'Professional Summaries': False,
-            'Work Experience': False,
-            'Education': False,
-            'Certification': False,
-            'Awards and Achievement': False,
-            'Projects': False,
-            'Skills and Interests': False,
-            'Volunteering': False,
-            'Publication': False
+# Initialize environment variables
+api_key = os.environ.get("OPENAI_API_KEY")
+if not api_key:
+    raise ValueError("OPENAI_API_KEY environment variable is not set")
+
+# Set up LangChain caching for better performance
+from langchain.globals import set_llm_cache
+set_llm_cache(InMemoryCache())
+
+# Create LLM instance with caching enabled
+llm = ChatOpenAI(
+    model="gpt-4o",  # Updated to latest model
+    temperature=0.3,
+    max_tokens=8000,
+    api_key=api_key
+)
+
+# Create a memory cache for entire analysis results
+from functools import lru_cache
+import hashlib
+
+# Create a cache with a maximum size of 100 items
+_analysis_cache = {}
+MAX_CACHE_SIZE = 100
+
+# Updated resume sections based on V3 specifications
+resume_sections = [
+    {"section": "Personal Information", "symbol": "🛑", "mandatory": True},
+    {"section": "Website/Social Links", "symbol": "🛑", "mandatory": True},
+    {"section": "Professional Summary", "symbol": "🛑", "mandatory": True},
+    {"section": "Work Experience", "symbol": "🛑", "mandatory": True},
+    {"section": "Education", "symbol": "🛑", "mandatory": True},
+    {"section": "Skills and Interests", "symbol": "🛑", "mandatory": True},
+    {"section": "Certifications", "symbol": "💡", "mandatory": False},
+    {"section": "Awards/Achievements", "symbol": "💡", "mandatory": False},
+    {"section": "Projects", "symbol": "💡", "mandatory": False},
+    {"section": "Volunteering", "symbol": "💡", "mandatory": False},
+    {"section": "Publications", "symbol": "💡", "mandatory": False}
+]
+
+def evaluate_resume_sections(resume_json):
+    """
+    Evaluate the presence of sections in a resume JSON against mandatory and optional indicators.
+    Updated for V3 scoring system.
+    """
+    result = {
+        "present": [],
+        "missing": {
+            "mandatory": [],
+            "optional": []
         }
+    }
+
+    for section in resume_sections:
+        section_name = section["section"]
+        mandatory = section["mandatory"]
+
+        if section_name in resume_json and resume_json[section_name]:
+            result["present"].append(section_name)
+        else:
+            if mandatory:
+                result["missing"]["mandatory"].append(section_name)
+            else:
+                result["missing"]["optional"].append(section_name)
+    
+    print(result)
+    return result
+
+
+
+def skills_tools_relevance(skills, job_description):
+    """
+    Updated skills & tools relevance analysis based on V3 scoring system (15 points max).
+    Includes double-counting prevention logic.
+    """
+    prompt = f'''Given the job description: {job_description}
+    Skills from resume: {skills}
+
+    Analyze skills and tools relevance based on V3 scoring criteria. This is worth 15 points total.
+
+    SCORING CRITERIA (15 points max):
+    - Hard Skill Match: +1 point each
+    - Soft Skill Match: +0.5 point each  
+    - Missing Critical Skill/Tool: -1 point each
+
+    DOUBLE-COUNTING PREVENTION:
+    - If a skill appears in experience AND skills sections, apply 50% reduction here
+    - Prioritize skills proven through past work experience
+
+    Categories:
+    - Hard Skills: Technical skills, programming languages, software, tools
+    - Soft Skills: Communication, Leadership, Problem-solving, etc.
+    - Domain-specific: Industry tools and methodologies
+
+    JSON STRUCTURE:
+    {{
+        "score": {{
+            "matchPercentage": 0,
+            "pointsAwarded": 0,
+            "maxPoints": 15,
+            "rating": "rating text", 
+            "ratingSymbol": "emoji"
+        }},
+        "analysis": {{
+            "hardSkillMatches": [
+                {{
+                    "skill": "skill name",
+                    "points": 1.0,
+                    "status": "Found",
+                    "symbol": "✅"
+                }}
+            ],
+            "softSkillMatches": [
+                {{
+                    "skill": "skill name", 
+                    "points": 0.5,
+                    "status": "Found",
+                    "symbol": "✅"
+                }}
+            ],
+            "missingSkills": [
+                {{
+                    "skill": "skill name",
+                    "points": -1,
+                    "status": "Missing Critical",
+                    "symbol": "❌"
+                }}
+            ],
+            "doubleCountReductions": [
+                {{
+                    "skill": "skill name",
+                    "originalPoints": 1.0,
+                    "reducedPoints": 0.5,
+                    "reason": "Also found in experience"
+                }}
+            ],
+            "suggestedImprovements": "detailed improvement suggestions"
+        }}
+    }}
+
+    RATING SCALE:
+    - 13-15 points: "Excellent" (✅)
+    - 10-12 points: "Good" (👍)
+    - 7-9 points: "Fair" (⚠️) 
+    - 4-6 points: "Needs Improvement" (🛑)
+    - Below 4 points: "Poor" (❌)
+    '''
+
+    response = gen_model(prompt)
+    
+    # Validate and cap points at 15
+    if response.get('score', {}).get('pointsAwarded', 0) > 15:
+        response['score']['pointsAwarded'] = 15
+    
+    return response
+
+
+def create_analysis_chain(analysis_function):
+    """Create a chain that runs a specific analysis function"""
+    return RunnableLambda(lambda inputs: analysis_function(**inputs))
+
+def detail_resume_analysis(resume_text, job_description, use_cache=True, version="v3.0"):
+    """
+    Updated resume analysis using V3 scoring system with new 100-point structure.
+    Job Fit Score: 100 points total
+    Resume Quality Score: 100 points total (internal only, shown as tiered labels)
+    """
+    try:
+        # Cache handling
+        if use_cache:
+            resume_str = json.dumps(resume_text, sort_keys=True)
+            job_desc_normalized = job_description.strip().lower()
+            combined_input = f"{resume_str}||{job_desc_normalized}||{version}"
+            cache_key = hashlib.md5(combined_input.encode()).hexdigest()
+            
+            logger.info(f"Generated cache key: {cache_key[:8]}... for job desc length: {len(job_description)}")
+            
+            if cache_key in _analysis_cache:
+                logger.info("Using cached analysis result")
+                return _analysis_cache[cache_key]
+                
+        start_time = time.time()
+        print("Starting V3 LangChain resume analysis...")
         
-        # Define scoring weights as per document
-        self.weights = {
-            "keyword_match": 20,
-            "job_experience": 20,
-            "skills_certifications": 15,
-            "resume_structure": 15,
-            "action_words": 10,
-            "measurable_results": 10,
-            "bullet_effectiveness": 10
-        }
+        # Get resume sections
+        sections_resume = evaluate_resume_sections(resume_text)
         
-        # Define scoring thresholds
-        self.thresholds = {
-            "keyword_match": {
-                90: 20,  # 90%+ = 20 points
-                75: 15,  # 75-89% = 15 points
-                60: 10,  # 60-74% = 10 points
-                40: 5    # Below 60% = 5 points
+        # Safe access to resume components
+        work_experience = resume_text.get("Work Experience", {})
+        certifications = resume_text.get("Certifications", [])
+        education = resume_text.get("Education", {})
+        skills = resume_text.get("Skills and Interests", [])
+        
+        # Create individual chains for V3 analysis components
+        
+        # JOB FIT COMPONENTS (100 points total)
+        keyword_match_chain = RunnableLambda(lambda x: keyword_match(resume_text=resume_text, job_description=job_description))
+        job_experience_chain = RunnableLambda(lambda x: job_experience(resume_text=work_experience, job_description=job_description))  
+        education_certifications_chain = RunnableLambda(lambda x: education_certifications(certifications=certifications, education=education, job_description=job_description))
+        skills_tools_chain = RunnableLambda(lambda x: skills_tools_relevance(skills=skills, job_description=job_description))
+        
+        # RESUME QUALITY COMPONENTS (100 points total)
+        resume_structure_chain = RunnableLambda(lambda x: resume_structure(sections=sections_resume))
+        action_words_chain = RunnableLambda(lambda x: action_words(resume_text=resume_text, job_description=job_description))
+        measurable_results_chain = RunnableLambda(lambda x: measurable_results(resume_text=resume_text, job_description=job_description))
+        bullet_point_effectiveness_chain = RunnableLambda(lambda x: bullet_point_effectiveness(resume_text=resume_text))
+        
+        # Create parallel runnable
+        parallel_analysis = RunnableParallel(
+            keyword_match=keyword_match_chain,
+            job_experience=job_experience_chain,
+            education_certifications=education_certifications_chain,
+            skills_tools=skills_tools_chain,
+            resume_structure=resume_structure_chain,
+            action_words=action_words_chain,
+            measurable_results=measurable_results_chain,
+            bullet_point_effectiveness=bullet_point_effectiveness_chain
+        )
+        inputs = {}
+        # Run all analyses in parallel
+        results = parallel_analysis.invoke(inputs)
+        
+        # Extract results
+        keyword_match_json = results["keyword_match"]
+        job_experience_json = results["job_experience"]
+        education_certifications_json = results["education_certifications"]
+        skills_tools_json = results["skills_tools"]
+        resume_structure_json = results["resume_structure"]
+        action_words_json = results["action_words"]
+        measurable_results_json = results["measurable_results"]
+        bullet_point_effectiveness_json = results["bullet_point_effectiveness"]
+        
+        print(f"LangChain analysis completed in {time.time() - start_time:.2f} seconds")
+        
+        # Ensure all responses are properly parsed JSON objects
+        def validate_json_response(response, component_name, default_points=0):
+            if not isinstance(response, dict):
+                print(f"Warning: {component_name} is not a dictionary")
+                if isinstance(response, str):
+                    try:
+                        response = json.loads(response)
+                    except:
+                        response = {"score": {"pointsAwarded": default_points, "rating": "Error"}, "analysis": {}}
+                else:
+                    response = {"score": {"pointsAwarded": default_points, "rating": "Error"}, "analysis": {}}
+            return response
+        
+        # Validate all components
+        keyword_match_json = validate_json_response(keyword_match_json, "keyword_match_json")
+        job_experience_json = validate_json_response(job_experience_json, "job_experience_json")
+        education_certifications_json = validate_json_response(education_certifications_json, "education_certifications_json")
+        skills_tools_json = validate_json_response(skills_tools_json, "skills_tools_json")
+        resume_structure_json = validate_json_response(resume_structure_json, "resume_structure_json")
+        action_words_json = validate_json_response(action_words_json, "action_words_json")
+        measurable_results_json = validate_json_response(measurable_results_json, "measurable_results_json")
+        bullet_point_effectiveness_json = validate_json_response(bullet_point_effectiveness_json, "bullet_point_effectiveness_json")
+        
+        # Calculate Job Fit Score (100 points) and Resume Quality Score (100 points)
+        job_fit_scores = calculate_job_fit_score(
+            keyword_match_json['score']['pointsAwarded'], 
+            job_experience_json['score']['pointsAwarded'], 
+            education_certifications_json['score']['pointsAwarded'],
+            skills_tools_json['score']['pointsAwarded']
+        )
+        
+        resume_quality_scores = calculate_resume_quality_score(
+            resume_structure_json['score']['pointsAwarded'], 
+            action_words_json['score']['pointsAwarded'], 
+            measurable_results_json['score']['pointsAwarded'], 
+            bullet_point_effectiveness_json['score']['pointsAwarded']
+        )
+        
+        # Round all scores in the individual components
+        for component in [keyword_match_json, job_experience_json, education_certifications_json, skills_tools_json,
+                          resume_structure_json, action_words_json, measurable_results_json, 
+                          bullet_point_effectiveness_json]:
+            if 'score' in component and 'pointsAwarded' in component['score']:
+                component['score']['pointsAwarded'] = round(float(component['score']['pointsAwarded']))
+            
+            # Round percentage values if they exist
+            if 'score' in component:
+                for key in component['score']:
+                    if 'percentage' in key.lower() or key.lower().endswith('count'):
+                        if component['score'][key] is not None and isinstance(component['score'][key], (int, float)):
+                            component['score'][key] = round(float(component['score'][key]))
+        
+        # Combine all the JSON results into a single dictionary with V3 structure
+        result = {
+            "version": "v3.0",
+            "job_fit_score": {
+                "total_points": job_fit_scores['total_points'],
+                "percentage": job_fit_scores['percentage'],
+                "label": job_fit_scores['label'],
+                "symbol": job_fit_scores['symbol']
             },
-            "job_experience": {
-                80: 20,  # 80%+ = 20 points
-                65: 15,  # 65-79% = 15 points
-                50: 10,  # 50-64% = 10 points
-                30: 5    # Below 50% = 5 points
+            "resume_quality_score": {
+                "total_points": resume_quality_scores['total_points'],
+                "label": resume_quality_scores['label'],
+                "symbol": resume_quality_scores['symbol']
             },
-            "skills_certifications": {
-                90: 15,  # 90%+ = 15 points
-                75: 12,  # 75-89% = 12 points
-                60: 9,   # 60-74% = 9 points
-                40: 6    # Below 60% = 6 points
-            }
+            "detailed_analysis": {
+                "keyword_match": keyword_match_json,
+                "job_experience": job_experience_json,
+                "education_certifications": education_certifications_json,
+                "skills_tools": skills_tools_json,
+                "resume_structure": resume_structure_json,
+                "action_words": action_words_json,
+                "measurable_results": measurable_results_json,
+                "bullet_point_effectiveness": bullet_point_effectiveness_json
+            },
+            # Keep backward compatibility
+            "overall_score": job_fit_scores['percentage'],  # For backward compatibility
+            "keyword_match": keyword_match_json,
+            "job_experience": job_experience_json,
+            "skills_certifications": education_certifications_json,  # Keep old naming for compatibility
+            "resume_structure": resume_structure_json,
+            "action_words": action_words_json,
+            "measurable_results": measurable_results_json,
+            "bullet_point_effectiveness": bullet_point_effectiveness_json
         }
         
-        # Define action verbs and weak words
-        self.action_verbs = [
-            'achieved', 'improved', 'launched', 'developed', 'implemented',
-            'created', 'reduced', 'increased', 'designed', 'established',
-            'managed', 'led', 'executed', 'generated', 'delivered',
-            'streamlined', 'optimized', 'innovated', 'transformed', 'pioneered'
-        ]
+        # Cache the result if caching is enabled
+        if use_cache and cache_key:
+            # If cache is full, remove oldest entry
+            if len(_analysis_cache) >= MAX_CACHE_SIZE:
+                oldest_key = next(iter(_analysis_cache))
+                del _analysis_cache[oldest_key]
+            
+            # Add new result to cache
+            _analysis_cache[cache_key] = result
         
-        self.weak_words = [
-            'worked', 'helped', 'assisted', 'responsible for', 'participated',
-            'results-oriented', 'detail-oriented', 'team player', 'dynamic',
-            'proven track record', 'go-getter', 'think outside the box'
-        ]
+        return result
+    
+    except Exception as e:
+        print(f"Error in detail_resume_analysis: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Return a minimal structure to prevent frontend errors
+        return {
+            "version": "v3.0",
+            "job_fit_score": {
+                "total_points": 0,
+                "percentage": 0,
+                "label": "🔄 Low Fit",
+                "symbol": "🔄"
+            },
+            "resume_quality_score": {
+                "total_points": 0,
+                "label": "🛠 Refine for Impact",
+                "symbol": "🛠"
+            },
+            "overall_score": 0,
+            "keyword_match": {"score": {"pointsAwarded": 0, "matchPercentage": 0, "rating": "Error"}, "analysis": {"strongMatches": [], "partialMatches": [], "missingKeywords": []}},
+            "job_experience": {"score": {"pointsAwarded": 0, "alignmentPercentage": 0, "rating": "Error"}, "analysis": {"strongMatches": [], "partialMatches": [], "misalignedRoles": []}},
+            "skills_certifications": {"score": {"pointsAwarded": 0, "matchPercentage": 0, "rating": "Error"}, "analysis": {"educationMatch": [], "certificationMatches": [], "missingCredentials": []}},
+            "resume_structure": {"score": {"pointsAwarded": 0, "completedMustHave": 0, "totalMustHave": 6}, "analysis": {"sectionStatus": []}},
+            "action_words": {"score": {"pointsAwarded": 0, "actionVerbPercentage": 0}, "analysis": {"strongActionVerbs": [], "weakActionVerbs": []}},
+            "measurable_results": {"score": {"pointsAwarded": 0, "measurableResultsCount": 0}, "analysis": {"measurableResults": [], "opportunitiesForMetrics": []}},
+            "bullet_point_effectiveness": {"score": {"pointsAwarded": 0, "effectiveBulletPercentage": 0}, "analysis": {"effectiveBullets": [], "ineffectiveBullets": []}}
+        }
 
-    def analyze_job_requirements(self):
-        """Analyze job description to extract requirements"""
-        try:
-            prompt = """Analyze this job description and extract key requirements:
+def calculate_job_fit_score(keyword_points, experience_points, education_points, skills_points):
+    """
+    Calculate Job Fit Score based on V3 specifications (100 points total)
+    - Keyword & Contextual Match: 35 points
+    - Experience Alignment: 30 points  
+    - Education & Certifications: 20 points
+    - Skills & Tools Relevance: 15 points
+    """
+    # Ensure points don't exceed their maximums
+    keyword_points = min(float(keyword_points or 0), 35)
+    experience_points = min(float(experience_points or 0), 30)
+    education_points = min(float(education_points or 0), 20)
+    skills_points = min(float(skills_points or 0), 15)
+    
+    total_points = keyword_points + experience_points + education_points + skills_points
+    percentage = round(total_points)  # Since max is 100, percentage = total points
+    
+    # Determine label and symbol based on percentage
+    if percentage >= 90:
+        label = "✅ Great Match"
+        symbol = "✅"
+    elif percentage >= 75:
+        label = "👍 Good Match" 
+        symbol = "👍"
+    elif percentage >= 60:
+        label = "⚠ Moderate Match"
+        symbol = "⚠"
+    else:
+        label = "🔄 Low Fit"
+        symbol = "🔄"
+    
+    return {
+        "total_points": round(total_points),
+        "percentage": percentage,
+        "label": label,
+        "symbol": symbol
+    }
 
-            1. Required technical skills and keywords (specific tools, technologies, methodologies)
-            2. Required experience (years, type, level)
-            3. Required skills and certifications
-            4. Required education
-            5. Required soft skills
-            6. Expected measurable achievements
-            7. Required document sections
+def calculate_resume_quality_score(structure_points, action_words_points, measurable_points, bullet_points):
+    """
+    Calculate Resume Quality Score based on V3 specifications (100 points total)
+    - Resume Structure: 30 points (30%)
+    - Action Words Usage: 25 points (25%)
+    - Measurable Results: 25 points (25%)
+    - Bullet Point Effectiveness: 20 points (20%)
+    """
+    # Ensure points don't exceed their maximums
+    structure_points = min(float(structure_points or 0), 30)
+    action_words_points = min(float(action_words_points or 0), 25)
+    measurable_points = min(float(measurable_points or 0), 25)
+    bullet_points = min(float(bullet_points or 0), 20)
+    
+    total_points = structure_points + action_words_points + measurable_points + bullet_points
+    
+    # Determine label and symbol based on total points (not shown to user as numeric)
+    if total_points >= 90:
+        label = "✅ Ready to Impress"
+        symbol = "✅"
+    elif total_points >= 70:
+        label = "⚠ Needs Polish"
+        symbol = "⚠"
+    else:
+        label = "🛠 Refine for Impact"
+        symbol = "🛠"
+    
+    return {
+        "total_points": round(total_points),
+        "label": label,
+        "symbol": symbol
+    }
 
-            Format as JSON with these exact keys:
-            {
-                "keywords": [],
-                "experience": {},
-                "skills": [],
-                "certifications": [],
-                "education": {},
-                "soft_skills": [],
-                "achievements": [],
-                "required_sections": []
-            }
-
-            Job Description: {self.job_desc}"""
-
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a precise job requirements analyzer. Extract specific, measurable requirements."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.3
-            )
-            
-            return json.loads(response.choices[0].message.content)
-        except Exception as e:
-            print(f"Error in analyze_job_requirements: {str(e)}")
-            return None
-
-    def check_resume_structure(self):
-        """Analyze resume structure and ATS readability"""
-        try:
-            # Check for all possible sections
-            present_sections = 0
-            total_sections = len(self.all_sections)
-            
-            for section in self.all_sections:
-                if re.search(rf'\b{section}\b', self.resume, re.IGNORECASE):
-                    self.all_sections[section] = True
-                    present_sections += 1
-            
-            # Calculate structure score (15 points max)
-            structure_score = round((present_sections / total_sections) * 15)
-            
-            # Check ATS readability
-            ats_issues = []
-            
-            # Check for common ATS issues
-            if re.search(r'[^\x00-\x7F]+', self.resume):  # Non-ASCII characters
-                ats_issues.append("Contains special characters that may affect ATS readability")
-            if re.search(r'<[^>]+>', self.resume):  # HTML tags
-                ats_issues.append("Contains HTML formatting that may affect ATS parsing")
-            if len(re.findall(r'\n\n+', self.resume)) > 5:  # Excessive spacing
-                ats_issues.append("Contains excessive blank lines that may affect formatting")
-                
-            return structure_score, self.all_sections, ats_issues
-            
-        except Exception as e:
-            print(f"Error in check_resume_structure: {str(e)}")
-            return 0, {}, []
-
-    def analyze_bullet_points(self):
-        """Analyze bullet point effectiveness"""
-        try:
-            # Extract bullet points
-            bullet_points = re.findall(r'[•\-]\s*(.*?)(?:\n|$)', self.resume)
-            if not bullet_points:
-                bullet_points = [s.strip() for s in re.split(r'\.\s+', self.resume) if s.strip()]
-            
-            total_points = len(bullet_points)
-            if total_points == 0:
-                return 0, [], "No bullet points found"
-            
-            effective_bullets = []
-            for bullet in bullet_points:
-                words = bullet.split()
-                char_length = len(bullet)
-                
-                # Check criteria:
-                # 1. Character length (85-120 characters)
-                # 2. Impactful first/last words
-                # 3. Contains measurable result
-                if (85 <= char_length <= 120 and
-                    any(word.lower() in self.action_verbs for word in words[:4]) and
-                    not any(weak in bullet.lower() for weak in self.weak_words) and
-                    re.search(r'\d+%|\$\d+|\d+\s*[kKmMbB]|\d+\s*times', bullet)):
-                    effective_bullets.append(bullet)
-            
-            effectiveness_score = round((len(effective_bullets) / total_points) * 10)
-            return effectiveness_score, effective_bullets, f"{len(effective_bullets)} of {total_points} bullets are effective"
-            
-        except Exception as e:
-            print(f"Error in analyze_bullet_points: {str(e)}")
-            return 0, [], str(e)
-
-    def analyze_measurable_results(self):
-        """Analyze measurable achievements"""
-        try:
-            # Find all quantifiable metrics
-            metrics = re.findall(r'\d+%|\$\d+|\d+\s*[kKmMbB]|\d+\s*times|\d+\+?\s*years?', self.resume)
-            
-            # Extract full sentences containing metrics
-            sentences = re.split(r'[.!?]+', self.resume)
-            achievements = []
-            
-            for sentence in sentences:
-                if any(metric in sentence for metric in metrics):
-                    # Check if the metric is paired with an action verb and impact
-                    if (any(verb in sentence.lower() for verb in self.action_verbs) and
-                        re.search(r'increased|decreased|improved|reduced|generated|saved|achieved', sentence.lower())):
-                        achievements.append(sentence.strip())
-            
-            # Score based on quality achievements (max 10 points)
-            score = min(10, len(achievements) * 2)
-            return score, achievements, f"Found {len(achievements)} impactful achievements"
-            
-        except Exception as e:
-            print(f"Error in analyze_measurable_results: {str(e)}")
-            return 0, [], str(e)
-
-    def calculate_score(self):
-        """Calculate overall resume score"""
-        try:
-            # Get job requirements
-            job_reqs = self.analyze_job_requirements()
-            if not job_reqs:
-                raise Exception("Failed to analyze job requirements")
-
-            scores = {}
-            detailed_analysis = {}
-            
-            # 1. Keyword Match (20%)
-            prompt = f"""Compare these required keywords with the resume text and calculate match percentage. Return a JSON object in this exact format:
-            {{
-                "match_percentage": number between 0-100,
-                "matches": [list of matching keywords found],
-                "missing": [list of keywords not found]
-            }}
-
-            Required Keywords: {json.dumps(job_reqs['keywords'])}
-            Resume: {self.resume}"""
-            
-            try:
-                response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are a keyword matching specialist. Always return valid JSON."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.3
-                )
-                
-                # Extract the content and clean it to ensure valid JSON
-                content = response.choices[0].message.content.strip()
-                # Remove any markdown code block indicators if present
-                content = re.sub(r'^```json\s*|\s*```$', '', content)
-                keyword_analysis = json.loads(content)
-                
-                match_percentage = float(keyword_analysis.get("match_percentage", 0))
-                
-            except (json.JSONDecodeError, ValueError) as e:
-                print(f"Error parsing keyword analysis response: {str(e)}")
-                print(f"Raw response: {response.choices[0].message.content}")
-                match_percentage = 0
-                keyword_analysis = {"matches": [], "missing": []}
-            
-            # Apply threshold scoring
-            for threshold, score in sorted(self.thresholds["keyword_match"].items(), reverse=True):
-                if match_percentage >= threshold:
-                    scores["keyword_match"] = score
-                    break
-            else:
-                scores["keyword_match"] = 5
-            
-            detailed_analysis["keyword_match"] = f"Keyword match: {match_percentage}%. Found matches: {', '.join(keyword_analysis.get('matches', []))}"
-
-            # 2. Job Experience (20%)
-            prompt = f"""Analyze how well the resume's experience matches these job requirements. Return a JSON object in this exact format:
-            {{
-                "match_percentage": number between 0-100,
-                "matches": [list of matching experiences],
-                "missing": [list of missing requirements],
-                "justification": "detailed explanation"
-            }}
-
-            Required Experience: {json.dumps(job_reqs['experience'])}
-            Resume: {self.resume}"""
-
-            try:
-                response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are an experience matching specialist. Always return valid JSON."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.3
-                )
-                
-                content = response.choices[0].message.content.strip()
-                content = re.sub(r'^```json\s*|\s*```$', '', content)
-                exp_analysis = json.loads(content)
-                
-                exp_percentage = float(exp_analysis.get("match_percentage", 0))
-                
-            except (json.JSONDecodeError, ValueError) as e:
-                print(f"Error parsing experience analysis response: {str(e)}")
-                print(f"Raw response: {response.choices[0].message.content}")
-                exp_percentage = 0
-                exp_analysis = {"matches": [], "missing": [], "justification": "Analysis failed"}
-
-            # Apply threshold scoring
-            for threshold, score in sorted(self.thresholds["job_experience"].items(), reverse=True):
-                if exp_percentage >= threshold:
-                    scores["job_experience"] = score
-                    break
-            else:
-                scores["job_experience"] = 5
-
-            detailed_analysis["job_experience"] = f"Experience match: {exp_percentage}%. {exp_analysis.get('justification', '')}"
-
-            # 3. Skills & Certifications (15%)
-            prompt = f"""Analyze how well the resume's skills and certifications match these requirements. Return a JSON object in this exact format:
-            {{
-                "match_percentage": number between 0-100,
-                "matches": [list of matching skills/certifications],
-                "missing": [list of missing requirements],
-                "justification": "detailed explanation"
-            }}
-
-            Required Skills: {json.dumps(job_reqs['skills'])}
-            Required Certifications: {json.dumps(job_reqs['certifications'])}
-            Required Education: {json.dumps(job_reqs['education'])}
-            Resume: {self.resume}"""
-
-            try:
-                response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are a skills matching specialist. Always return valid JSON."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.3
-                )
-                
-                content = response.choices[0].message.content.strip()
-                content = re.sub(r'^```json\s*|\s*```$', '', content)
-                skills_analysis = json.loads(content)
-                
-                skills_percentage = float(skills_analysis.get("match_percentage", 0))
-                
-            except (json.JSONDecodeError, ValueError) as e:
-                print(f"Error parsing skills analysis response: {str(e)}")
-                print(f"Raw response: {response.choices[0].message.content}")
-                skills_percentage = 0
-                skills_analysis = {"matches": [], "missing": [], "justification": "Analysis failed"}
-
-            # Apply threshold scoring
-            for threshold, score in sorted(self.thresholds["skills_certifications"].items(), reverse=True):
-                if skills_percentage >= threshold:
-                    scores["skills_certifications"] = score
-                    break
-            else:
-                scores["skills_certifications"] = 6
-
-            detailed_analysis["skills_certifications"] = f"Skills match: {skills_percentage}%. {skills_analysis.get('justification', '')}"
-            
-            # 4. Resume Structure (15%)
-            structure_score, sections, ats_issues = self.check_resume_structure()
-            scores["resume_structure"] = structure_score
-            detailed_analysis["resume_structure"] = f"Structure score: {structure_score}/15. ATS Issues: {', '.join(ats_issues)}"
-            
-            # 5. Action Words (10%)
-            action_words = [word for word in self.action_verbs if word.lower() in self.resume.lower()]
-            weak_words = [word for word in self.weak_words if word.lower() in self.resume.lower()]
-            action_score = round((len(action_words) / max(len(action_words) + len(weak_words), 1)) * 10)
-            scores["action_words"] = action_score
-            detailed_analysis["action_words"] = f"Found {len(action_words)} strong action words and {len(weak_words)} weak words"
-            
-            # 6. Measurable Results (10%)
-            metrics_score, achievements, metrics_analysis = self.analyze_measurable_results()
-            scores["measurable_results"] = metrics_score
-            detailed_analysis["measurable_results"] = metrics_analysis
-            
-            # 7. Bullet Point Effectiveness (10%)
-            bullet_score, effective_bullets, bullet_analysis = self.analyze_bullet_points()
-            scores["bullet_effectiveness"] = bullet_score
-            detailed_analysis["bullet_effectiveness"] = bullet_analysis
-            
-            # Calculate total score
-            total_score = sum(scores.values())
-            
-            # Generate recommendations using OpenAI
-            prompt = f"""Based on this detailed analysis, provide specific, actionable recommendations:
-
-            Analysis Summary:
-            - Overall Score: {total_score}/100
-            - Keyword Match: {scores['keyword_match']}/20 ({keyword_analysis.get('matches', [])})
-            - Experience Match: {scores['job_experience']}/20 ({exp_analysis.get('missing', [])})
-            - Skills & Certifications: {scores['skills_certifications']}/15 ({skills_analysis.get('missing', [])})
-            - Resume Structure: {scores['resume_structure']}/15 (Issues: {ats_issues})
-            - Action Words: {scores['action_words']}/10 (Weak words: {weak_words})
-            - Measurable Results: {scores['measurable_results']}/10
-            - Bullet Points: {scores['bullet_effectiveness']}/10
-
-            Job Requirements:
-            {json.dumps(job_reqs, indent=2)}
-
-            Provide 5-7 specific, actionable recommendations to improve this resume for this job.
-            Focus on the lowest scoring areas and most critical missing elements.
-            Each recommendation should be clear, specific, and directly address gaps found in the analysis."""
-
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a professional resume expert. Provide specific, actionable recommendations."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7
-            )
-
-            recommendations = [rec.strip() for rec in response.choices[0].message.content.split('\n') if rec.strip()]
-
-            # Format results
-            return {
-                "overall_score": total_score,
-                "category_scores": scores,
-                "detailed_analysis": detailed_analysis,
-                "recommendations": recommendations,
-                "sections_present": sections,
-                "achievements": achievements,
-                "effective_bullets": effective_bullets,
-                "job_requirements": job_reqs,
-                "matches_found": {
-                    "keywords": keyword_analysis.get('matches', []),
-                    "experience": exp_analysis.get('matches', []),
-                    "skills": skills_analysis.get('matches', []),
-                    "metrics": achievements
-                },
-                "missing_elements": {
-                    "keywords": keyword_analysis.get('missing', []),
-                    "experience": exp_analysis.get('missing', []),
-                    "skills": skills_analysis.get('missing', []),
-                    "sections": [section for section, present in sections.items() if not present]
-                }
-            }
-
-        except Exception as e:
-            print(f"Error in calculate_score: {str(e)}")
-            return {
-                "overall_score": 0,
-                "category_scores": {
-                    "keyword_match": 0,
-                    "job_experience": 0,
-                    "skills_certifications": 0,
-                    "resume_structure": 0,
-                    "action_words": 0,
-                    "measurable_results": 0,
-                    "bullet_effectiveness": 0
-                },
-                "detailed_analysis": {
-                    "keyword_match": f"Analysis failed: {str(e)}",
-                    "job_experience": "Analysis unavailable due to error",
-                    "skills_certifications": "Analysis unavailable due to error",
-                    "resume_structure": "Analysis unavailable due to error",
-                    "action_words": "Analysis unavailable due to error",
-                    "measurable_results": "Analysis unavailable due to error",
-                    "bullet_effectiveness": "Analysis unavailable due to error"
-                },
-                "recommendations": [
-                    "There was an error analyzing your resume. Please try again.",
-                    f"Error details: {str(e)}"
-                ]
-            }
+def overall_score(score1, score2, score3, score4, score5, score6, score7):
+    """
+    Legacy function for backward compatibility
+    This now delegates to the new V3 scoring system
+    """
+    try:
+        # Map old parameters to new V3 structure
+        # score1 = keyword_match (35 pts max)
+        # score2 = job_experience (30 pts max)  
+        # score3 = skills_certifications (combined education + skills, need to split)
+        # score4 = resume_structure (30 pts max)
+        # score5 = action_words (25 pts max)
+        # score6 = measurable_results (25 pts max)
+        # score7 = bullet_point_effectiveness (20 pts max)
+        
+        s1 = float(score1) if score1 is not None else 0
+        s2 = float(score2) if score2 is not None else 0
+        s3 = float(score3) if score3 is not None else 0
+        
+        # Split score3 proportionally between education (20 pts) and skills (15 pts)
+        total_education_skills = 35  # 20 + 15
+        if s3 > 0:
+            education_score = (s3 / total_education_skills) * 20
+            skills_score = (s3 / total_education_skills) * 15
+        else:
+            education_score = 0
+            skills_score = 0
+        
+        # Calculate job fit score using new function
+        job_fit_scores = calculate_job_fit_score(s1, s2, education_score, skills_score)
+        
+        return job_fit_scores['percentage']
+        
+    except (ValueError, TypeError) as e:
+        print(f"Error calculating overall score: {e}")
+        print(f"Scores: {score1}, {score2}, {score3}, {score4}, {score5}, {score6}, {score7}")
+        return 0

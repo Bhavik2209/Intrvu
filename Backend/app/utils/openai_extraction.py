@@ -63,9 +63,9 @@ try:
     
     # Initialize LangChain ChatOpenAI model
     llm = ChatOpenAI(
-        model="gpt-3.5-turbo-16k",
+        model="gpt-4o",
         temperature=0.1,
-        max_tokens=4000,
+        max_tokens=8000,
         request_timeout=30.0
     )
     

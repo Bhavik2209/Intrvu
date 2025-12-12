@@ -1,0 +1,14 @@
+name: Keep Render Alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # runs every 5 minutes
+  workflow_dispatch:        # allows manual run
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Curl Render API
+        run: |
+          curl -sS https://intrvu.onrender.com || true

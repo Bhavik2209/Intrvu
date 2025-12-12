@@ -6,6 +6,7 @@ import os
 import time
 from datetime import datetime, timedelta
 from collections import defaultdict
+from routers.analyze import router as analyze_router
 
 # Add the parent directory to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -27,5 +28,8 @@ app.add_middleware(
 )
 
 # Import new structured router
-from routers.analyze import router as analyze_router
 app.include_router(analyze_router)
+
+@app.get("/ping")
+def ping():
+    return {"status": "alive"}

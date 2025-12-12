@@ -7,7 +7,7 @@ import hashlib
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
-from langchain.globals import set_debug
+from langchain_core.globals import set_debug
 from langchain_core.caches import InMemoryCache
 from langchain_core.runnables import RunnableParallel, RunnableLambda
 from .action_words import action_words
@@ -33,7 +33,7 @@ if not api_key:
     raise ValueError("OPENAI_API_KEY environment variable is not set")
 
 # Set up LangChain caching for better performance
-from langchain.globals import set_llm_cache
+from langchain_core.globals import set_llm_cache
 set_llm_cache(InMemoryCache())
 
 # Create LLM instance with caching enabled

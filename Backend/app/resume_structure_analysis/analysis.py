@@ -212,6 +212,58 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True, version
         action_words_json = validate_json_response(action_words_json, "action_words_json")
         measurable_results_json = validate_json_response(measurable_results_json, "measurable_results_json")
         bullet_point_effectiveness_json = validate_json_response(bullet_point_effectiveness_json, "bullet_point_effectiveness_json")
+
+        # Normalize skills_tools_json to ensure required fields exist
+        try:
+            st_score = skills_tools_json.setdefault('score', {})
+            # Coerce numeric fields
+            pts = float(st_score.get('pointsAwarded') or 0)
+            max_pts = float(st_score.get('maxPoints') or 15)
+            # Ensure matchPercentage present and numeric
+            mp = st_score.get('matchPercentage')
+            if not isinstance(mp, (int, float)):
+                st_score['matchPercentage'] = round((pts / max_pts) * 100) if max_pts > 0 else 0
+            # Ensure rating and ratingSymbol present
+            if not st_score.get('rating'):
+                if pts >= 13:
+                    st_score['rating'] = 'Excellent'
+                    st_score.setdefault('ratingSymbol', '✅')
+                elif pts >= 10:
+                    st_score['rating'] = 'Good'
+                    st_score.setdefault('ratingSymbol', '👍')
+                elif pts >= 7:
+                    st_score['rating'] = 'Fair'
+                    st_score.setdefault('ratingSymbol', '⚠️')
+                elif pts >= 4:
+                    st_score['rating'] = 'Needs Improvement'
+                    st_score.setdefault('ratingSymbol', '🛑')
+                else:
+                    st_score['rating'] = 'Poor'
+                    st_score.setdefault('ratingSymbol', '❌')
+
+            # Ensure analysis arrays exist and have expected keys
+            st_analysis = skills_tools_json.setdefault('analysis', {})
+            hard = st_analysis.get('hardSkillMatches')
+            soft = st_analysis.get('softSkillMatches')
+            missing = st_analysis.get('missingSkills')
+
+            # Some models may return matchedSkills instead of hardSkillMatches
+            if (not isinstance(hard, list) or len(hard) == 0) and isinstance(st_analysis.get('matchedSkills'), list):
+                st_analysis['hardSkillMatches'] = [
+                    s if isinstance(s, dict) else {
+                        'skill': str(s), 'points': 1.0, 'status': 'Found', 'symbol': '✅'
+                    } for s in st_analysis['matchedSkills']
+                ]
+            if not isinstance(st_analysis.get('hardSkillMatches'), list):
+                st_analysis['hardSkillMatches'] = []
+            if not isinstance(soft, list):
+                st_analysis['softSkillMatches'] = []
+            if not isinstance(missing, list):
+                st_analysis['missingSkills'] = []
+            if not isinstance(st_analysis.get('doubleCountReductions'), list):
+                st_analysis['doubleCountReductions'] = []
+        except Exception as e:
+            print(f"Normalization error for skills_tools_json: {e}")
         
         # Calculate Job Fit Score (100 points) and Resume Quality Score (100 points)
         job_fit_scores = calculate_job_fit_score(

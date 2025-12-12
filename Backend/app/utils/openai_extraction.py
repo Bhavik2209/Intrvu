@@ -13,7 +13,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.runnables import RunnableLambda
-from langchain.cache import InMemoryCache
+from langchain_core.caches import InMemoryCache
 from langchain.globals import set_llm_cache
 from app.prompts.templates import EXTRACT_SYSTEM_TEMPLATE, EXTRACT_USER_TEMPLATE
 

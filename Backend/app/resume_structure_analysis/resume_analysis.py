@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain.globals import set_debug
-from langchain.cache import InMemoryCache
+from langchain_core.caches import InMemoryCache
 from langchain_core.runnables import RunnableParallel, RunnableLambda
 
 

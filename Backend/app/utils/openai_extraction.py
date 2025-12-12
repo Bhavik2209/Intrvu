@@ -15,6 +15,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.runnables import RunnableLambda
 from langchain.cache import InMemoryCache
 from langchain.globals import set_llm_cache
+from app.prompts.templates import EXTRACT_SYSTEM_TEMPLATE, EXTRACT_USER_TEMPLATE
 
 # Configure logging
 logging.basicConfig(
@@ -102,29 +103,9 @@ def create_resume_extraction_chain():
     Returns:
         Chain: A LangChain chain for processing resume text
     """
-    # Define the system and user message templates
-    system_template = """You are a resume analysis specialist that extracts structured information from resumes and returns it as valid JSON. 
-Only respond with valid JSON, no explanations or extra text."""
-    
-    user_template = """Extract the following information from the resume text below and format it as a structured JSON:
-
-1. Personal Information: Full name, email, phone number, and location
-2. Website/Social Links: LinkedIn profile URL and any other relevant online profiles
-3. Professional Summary: Create a concise, clear, and impactful summary (max 2-3 sentences)
-4. Work Experience: For each position, extract company name, job title, dates, location, and key responsibilities/achievements
-5. Education: For each degree, include institution name, degree title, field of study, and graduation date
-6. Certifications: List all professional certifications with names, issuing organizations, and dates
-7. Awards/Achievements: List all honors with titles, issuing organizations, and dates
-8. Projects: Include project names, descriptions, your role, technologies used, and outcomes
-9. Skills and Interests: List technical skills, soft skills, languages, and personal interests
-10. Volunteering: Include organization names, roles, dates, and key contributions
-11. Publications: Include titles, publication venues, dates, and co-authors if applicable
-
-Return the information in valid JSON format and if any section is missing so please add that section with empty list like [].
-
-Resume text: {resume_text}
-
-Important: Return ONLY valid JSON without any additional text, explanations, or formatting."""
+    # Use centralized system and user templates
+    system_template = EXTRACT_SYSTEM_TEMPLATE
+    user_template = EXTRACT_USER_TEMPLATE
     
     # Create the prompt from templates
     prompt = ChatPromptTemplate.from_messages([

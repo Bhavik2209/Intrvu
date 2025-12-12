@@ -26,9 +26,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Import all routes from app.main
-from app.main import router
-app.include_router(router)
-
-# This is the correct way to export the app for Vercel serverless
-# Do NOT set handler = app directly
+# Import new structured router
+from routers.analyze import router as analyze_router
+app.include_router(analyze_router)

@@ -10,16 +10,15 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain.globals import set_debug
 from langchain.cache import InMemoryCache
 from langchain_core.runnables import RunnableParallel, RunnableLambda
-
 from .action_words import action_words
 from .keyword_match import keyword_match
 from .job_experience import job_experience
 from .education_and_certifications import education_certifications
-from .resume_analysis import resume_structure
 from .measurable_results import measurable_results
 from .bullet_point_effectiveness import bullet_point_effectiveness
-from openai_model import gen_model
-
+from app.services.openai_model import gen_model
+from app.prompts.templates import skills_tools_relevance_prompt
+from .resume_analysis import resume_structure
 
 # Configure logging
 logging.basicConfig(
@@ -103,78 +102,7 @@ def skills_tools_relevance(skills, job_description):
     Updated skills & tools relevance analysis based on V3 scoring system (15 points max).
     Includes double-counting prevention logic.
     """
-    prompt = f'''Given the job description: {job_description}
-    Skills from resume: {skills}
-
-    Analyze skills and tools relevance based on V3 scoring criteria. This is worth 15 points total.
-
-    SCORING CRITERIA (15 points max):
-    - Hard Skill Match: +1 point each
-    - Soft Skill Match: +0.5 point each  
-    - Missing Critical Skill/Tool: -1 point each
-
-    DOUBLE-COUNTING PREVENTION:
-    - If a skill appears in experience AND skills sections, apply 50% reduction here
-    - Prioritize skills proven through past work experience
-
-    Categories:
-    - Hard Skills: Technical skills, programming languages, software, tools
-    - Soft Skills: Communication, Leadership, Problem-solving, etc.
-    - Domain-specific: Industry tools and methodologies
-
-    JSON STRUCTURE:
-    {{
-        "score": {{
-            "matchPercentage": 0,
-            "pointsAwarded": 0,
-            "maxPoints": 15,
-            "rating": "rating text", 
-            "ratingSymbol": "emoji"
-        }},
-        "analysis": {{
-            "hardSkillMatches": [
-                {{
-                    "skill": "skill name",
-                    "points": 1.0,
-                    "status": "Found",
-                    "symbol": "✅"
-                }}
-            ],
-            "softSkillMatches": [
-                {{
-                    "skill": "skill name", 
-                    "points": 0.5,
-                    "status": "Found",
-                    "symbol": "✅"
-                }}
-            ],
-            "missingSkills": [
-                {{
-                    "skill": "skill name",
-                    "points": -1,
-                    "status": "Missing Critical",
-                    "symbol": "❌"
-                }}
-            ],
-            "doubleCountReductions": [
-                {{
-                    "skill": "skill name",
-                    "originalPoints": 1.0,
-                    "reducedPoints": 0.5,
-                    "reason": "Also found in experience"
-                }}
-            ],
-            "suggestedImprovements": "detailed improvement suggestions"
-        }}
-    }}
-
-    RATING SCALE:
-    - 13-15 points: "Excellent" (✅)
-    - 10-12 points: "Good" (👍)
-    - 7-9 points: "Fair" (⚠️) 
-    - 4-6 points: "Needs Improvement" (🛑)
-    - Below 4 points: "Poor" (❌)
-    '''
+    prompt = skills_tools_relevance_prompt(skills, job_description)
 
     response = gen_model(prompt)
     

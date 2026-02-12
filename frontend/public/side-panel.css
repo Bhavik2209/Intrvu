@@ -1,0 +1,89 @@
+/* IntrvuFit Side Panel Styles */
+
+/* Side Panel Container */
+#intrvu-side-panel-container {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: 450px;
+    /* Default width, will be overridden by saved preference */
+    background: white;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+    z-index: 2147483647;
+    /* Maximum z-index to ensure it's on top */
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Panel visible state */
+#intrvu-side-panel-container.intrvu-panel-visible {
+    transform: translateX(0);
+}
+
+/* Resize Handle */
+#intrvu-resize-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 6px;
+    height: 100%;
+    background: #e5e7eb;
+    cursor: col-resize;
+    z-index: 10;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+}
+
+#intrvu-resize-handle:hover {
+    background: #3b82f6;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+}
+
+#intrvu-resize-handle:active {
+    background: #2563eb;
+    box-shadow: 0 0 12px rgba(37, 99, 235, 0.6);
+}
+
+/* Panel Content Area */
+#intrvu-panel-content {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    margin-left: 6px;
+    /* Account for resize handle */
+}
+
+/* Iframe for React App */
+#intrvu-panel-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+/* Resizing state - disable pointer events on iframe during resize */
+#intrvu-side-panel-container.intrvu-resizing #intrvu-panel-iframe {
+    pointer-events: none;
+}
+
+/* Overlay to capture mouse events during resize */
+#intrvu-resize-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2147483646;
+    cursor: col-resize;
+    display: none;
+}
+
+#intrvu-resize-overlay.active {
+    display: block;
+}

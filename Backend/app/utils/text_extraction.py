@@ -1,103 +1,82 @@
 import PyPDF2
 import io
 import logging
-import os
-from typing import Union, BinaryIO
+from typing import Union
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, 
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+from app.core.config import settings
+from app.core.exceptions import PDFValidationError
+
 logger = logging.getLogger(__name__)
 
-def extract_text_from_pdf(file: Union[BinaryIO, bytes]) -> str:
+def extract_text_from_pdf(file_bytes: bytes) -> str:
     """
     Securely extract text from a PDF file.
     
     Args:
-        file (Union[BinaryIO, bytes]): PDF file object or bytes
+        file_bytes: PDF file as bytes
     
     Returns:
-        str: Extracted text from the PDF
+        Extracted text from the PDF
+        
+    Raises:
+        PDFValidationError: If PDF is invalid or too large
     """
-    # Validate input
-    if file is None:
+    if not file_bytes:
         logger.warning("No file provided for text extraction")
-        return ""
+        raise PDFValidationError("No file provided")
 
-    # Input sanitization and conversion
+    # Convert bytes to BytesIO
+    file_content = io.BytesIO(file_bytes)
+
+    # Security: Limit PDF size
+    max_file_size = settings.max_pdf_size_mb * 1024 * 1024
+    file_content.seek(0, 2)  # Seek to end
+    file_size = file_content.tell()
+    file_content.seek(0)  # Seek back to start
+
+    if file_size > max_file_size:
+        logger.warning(f"PDF file too large: {file_size} bytes")
+        raise PDFValidationError(f"PDF file exceeds maximum size of {settings.max_pdf_size_mb}MB")
+
+    # Create PDF reader
     try:
-        # Convert to BytesIO if not already
-        if not isinstance(file, io.BytesIO):
-            # If it's a file-like object, read its content
-            if hasattr(file, 'read'):
-                file_content = io.BytesIO(file.read())
-            # If it's bytes, convert directly
-            elif isinstance(file, bytes):
-                file_content = io.BytesIO(file)
-            else:
-                logger.error(f"Unsupported file type: {type(file)}")
-                return ""
-        else:
-            file_content = file
-
-        # Security: Limit PDF size (e.g., 50 MB)
-        max_file_size = 50 * 1024 * 1024  # 50 MB
-        file_content.seek(0, os.SEEK_END)
-        file_size = file_content.tell()
-        file_content.seek(0)
-
-        if file_size > max_file_size:
-            logger.warning(f"PDF file too large: {file_size} bytes")
-            return ""
-
-        # Create PDF reader object with additional security
         pdf_reader = PyPDF2.PdfReader(file_content)
+    except PyPDF2.errors.PdfReadError as e:
+        logger.error(f"PDF reading error: {e}")
+        raise PDFValidationError(f"Invalid PDF file: {str(e)}")
 
-        # Validate number of pages
-        max_pages = 100  # Prevent processing extremely large PDFs
-        if len(pdf_reader.pages) > max_pages:
-            logger.warning(f"PDF exceeds max page limit: {len(pdf_reader.pages)} pages")
-            # Extract only first 100 pages
-            pdf_reader.pages = pdf_reader.pages[:max_pages]
+    # Validate number of pages
+    max_pages = settings.max_pdf_pages
+    num_pages = len(pdf_reader.pages)
+    if num_pages > max_pages:
+        logger.warning(f"PDF exceeds max page limit: {num_pages} pages")
+        # Only process first max_pages
+        pages_to_process = pdf_reader.pages[:max_pages]
+    else:
+        pages_to_process = pdf_reader.pages
 
-        # Extract text with additional error handling
-        text = ""
-        for page_num, page in enumerate(pdf_reader.pages, 1):
-            try:
-                page_text = page.extract_text()
-                text += page_text + "\n"
-                
-                # Optional: Limit total text length
-                if len(text) > 100000:  # ~100,000 characters
-                    logger.warning("Truncating extracted text due to length")
-                    text = text[:100000]
-                    break
-            except Exception as page_error:
-                logger.error(f"Error extracting text from page {page_num}: {page_error}")
-                continue
-
-        # Final text processing
-        processed_text = text.strip()
-
-        # Log successful extraction
-        logger.info(f"Successfully extracted text from PDF (Length: {len(processed_text)} chars)")
-
-        return processed_text
-
-    except PyPDF2.errors.PdfReadError as pdf_error:
-        # Specific handling for PDF-related errors
-        logger.error(f"PDF reading error: {pdf_error}")
-        return ""
-    except Exception as e:
-        # Comprehensive error logging
-        logger.error(f"Unexpected error in PDF text extraction: {e}", exc_info=True)
-        return ""
-    finally:
-        # Ensure file is closed if possible
+    # Extract text with error handling
+    text = ""
+    for page_num, page in enumerate(pages_to_process, 1):
         try:
-            if hasattr(file, 'close'):
-                file.close()
-        except Exception as close_error:
-            logger.error(f"Error closing file: {close_error}")
+            page_text = page.extract_text()
+            text += page_text + "\n"
+            
+            # Limit total text length
+            if len(text) > settings.max_text_length:
+                logger.warning("Truncating extracted text due to length")
+                text = text[:settings.max_text_length]
+                break
+        except Exception as page_error:
+            logger.error(f"Error extracting text from page {page_num}: {page_error}")
+            continue
+
+    # Final text processing
+    processed_text = text.strip()
+
+    # Log successful extraction
+    logger.info(f"Successfully extracted text from PDF (Length: {len(processed_text)} chars, Pages: {len(pages_to_process)})")
+
+    return processed_text
+
+

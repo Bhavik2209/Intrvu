@@ -1,0 +1,38 @@
+services:
+  # Web Service - FastAPI Backend
+  - type: web
+    name: intrvu-backend
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: RENDER
+        value: true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: intrvu-redis
+          property: connectionString
+      - key: REQUEST_TIMEOUT
+        value: 120
+      - key: REQUIRE_AUTH
+        value: false
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # Redis Service - For caching
+  - type: redis
+    name: intrvu-redis
+    region: oregon
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []

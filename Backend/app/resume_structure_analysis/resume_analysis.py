@@ -4,14 +4,17 @@ import time
 import logging
 import hashlib
 # Import LangChain components
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.globals import set_debug
 from langchain_core.caches import InMemoryCache
 from langchain_core.runnables import RunnableParallel, RunnableLambda
 
+from dotenv import load_dotenv
+from app.services.llm_service import get_llm_service
+from app.cache.redis_cache import redis_cache
 
+load_dotenv()   
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, 
@@ -19,33 +22,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize environment variables
-api_key = os.environ.get("OPENAI_API_KEY")
-if not api_key:
-    raise ValueError("OPENAI_API_KEY environment variable is not set")
-
 # Set up LangChain caching for better performance
 from langchain_core.globals import set_llm_cache
 set_llm_cache(InMemoryCache())
-
-# Create LLM instance with caching enabled
-llm = ChatOpenAI(
-    model="gpt-4.1",
-    temperature=0.3,
-    max_tokens=8000,  # Increased token limit for more detailed responses
-    api_key=api_key,
-    max_retries=2,
-    request_timeout=60
-)
-
-# Create a memory cache for entire analysis results
-# This will dramatically improve performance for repeat analyses
-from functools import lru_cache
-import hashlib
-
-# Create a cache with a maximum size of 100 items
-_analysis_cache = {}
-MAX_CACHE_SIZE = 100
 
 # Sections with mandatory and optional indicators
 resume_sections = [
@@ -118,7 +97,11 @@ def gen_model(prompt):
         parser = JsonOutputParser()
         
         # Create the chain: prompt -> LLM -> parser
-        chain = prompt_template | llm | parser
+        # Create the chain: prompt -> LLM -> clean -> parser
+        from langchain_core.runnables import RunnableLambda
+        clean_json = RunnableLambda(lambda x: x.content.replace("```json", "").replace("```", "").strip())
+        
+        chain = prompt_template | get_llm_service().provider._llm | clean_json | parser
         
         # Run the chain
         result = chain.invoke({"input": prompt})
@@ -137,14 +120,27 @@ def gen_model(prompt):
         raise  # Re-raise the exception instead of returning default
 
 
+def truncate_text(text, max_chars=15000):
+    """Truncate text to fit within Groq's request size limits"""
+    if isinstance(text, dict):
+        text = json.dumps(text)
+    if isinstance(text, str) and len(text) > max_chars:
+        return text[:max_chars] + "... [truncated]"
+    return text
+
+
 def keyword_match(resume_text, job_description):
+    # Truncate inputs to prevent exceeding Groq's 1MB limit
+    resume_text_truncated = truncate_text(resume_text, 8000)
+    job_description_truncated = truncate_text(job_description, 5000)
+    
     # Add validation
     if not job_description or not resume_text:
         raise ValueError("Job description or resume text is empty")
         
-    prompt = f"""Given the job description: {job_description}
+    prompt = f"""Given the job description: {job_description_truncated}
 
-        And the resume text: {resume_text}
+        And the resume text: {resume_text_truncated}
 
         Analyze how well the resume matches the job description. Generate a JSON response that includes a skills match score and detailed analysis. Follow these specifications:
 
@@ -198,9 +194,13 @@ def keyword_match(resume_text, job_description):
     return response
 
 def job_experience(resume_text, job_description):
-    prompt = f"""Given the job description: {job_description}
+    # Truncate inputs
+    resume_text_truncated = truncate_text(resume_text, 8000)
+    job_description_truncated = truncate_text(job_description, 5000)
+    
+    prompt = f"""Given the job description: {job_description_truncated}
 
-        And the job experience from the resume: {resume_text}
+        And the job experience from the resume: {resume_text_truncated}
         NOTE : if there is no job experience give the suggestions about what kind of job experience should be there in the resume according to the job desciption, 
         Analyze how well the work experience in the resume aligns with the job responsibilities. Generate a JSON response that includes a job experience alignment score and detailed analysis. Follow these specifications:
 
@@ -251,7 +251,12 @@ def job_experience(resume_text, job_description):
     return response
 
 def skills_certifications(certifications,skills, job_description):
-    prompt = f'''Given the job description: {job_description}, these are the certifications: {certifications} and these are skills present in the resume: {skills}.
+    # Truncate inputs
+    certifications_truncated = truncate_text(certifications, 2000)
+    skills_truncated = truncate_text(skills, 2000)
+    job_description_truncated = truncate_text(job_description, 5000)
+    
+    prompt = f'''Given the job description: {job_description_truncated}, these are the certifications: {certifications_truncated} and these are skills present in the resume: {skills_truncated}.
 
 Analyze how well the skills, education, and certifications in the resume match the requirements in the job description. Generate a JSON response that includes a comprehensive match score and detailed analysis. Follow these specifications:
 
@@ -437,7 +442,10 @@ def resume_structure(sections):
     return result
 
 def action_words(resume_text, job_description):
-    prompt = f'''Given the resume text: {resume_text}
+    # Truncate inputs
+    resume_text_truncated = truncate_text(resume_text, 10000)
+    
+    prompt = f'''Given the resume text: {resume_text_truncated}
 
         Analyze the use of strong, impactful action verbs in the resume. Generate a JSON response that includes an action words usage score and detailed analysis. Follow these specifications:
 
@@ -500,7 +508,10 @@ def action_words(resume_text, job_description):
     return response
 
 def measurable_results(resume_text, job_description):
-    prompt = f'''Given the resume text: {resume_text}
+    # Truncate inputs
+    resume_text_truncated = truncate_text(resume_text, 10000)
+    
+    prompt = f'''Given the resume text: {resume_text_truncated}
 
 Analyze whether the resume includes quantifiable metrics and measurable results. Generate a JSON response that identifies existing measurable results and provides suggestions for adding more. Follow these specifications:
 
@@ -557,7 +568,10 @@ Example of a NON-MEASURABLE result:
     return response
 
 def bullet_point_effectiveness(resume_text):
-    prompt = f'''Given the resume text: {resume_text}
+    # Truncate inputs
+    resume_text_truncated = truncate_text(resume_text, 10000)
+    
+    prompt = f'''Given the resume text: {resume_text_truncated}
 
         Analyze the effectiveness of bullet points in the resume: , evaluating their conciseness and impact. Generate a JSON response that includes a bullet point effectiveness score and detailed analysis. Follow these specifications:
 
@@ -624,11 +638,10 @@ def create_analysis_chain(analysis_function):
     # The lambda should directly pass the inputs to the function without any nested dictionaries
     return RunnableLambda(lambda inputs: analysis_function(**inputs))
 
-def detail_resume_analysis(resume_text, job_description, use_cache=True, version="v2.0"):  # Added version parameter for cache busting
-    """Perform resume analysis using LangChain's optimized processing with caching"""
+async def detail_resume_analysis(resume_text, job_description, use_cache=True, version="v3.0"):  # Made async, updated version
+    """Perform resume analysis using LangChain's optimized processing with Redis caching"""
     try:
-        # Generate a cache key based on resume and job description and version
-        # Generate a cache key based on resume and job description and version
+        # Check Redis cache if enabled
         if use_cache:
             # Create a deterministic hash of the inputs including version for cache busting
             resume_str = json.dumps(resume_text, sort_keys=True)
@@ -636,19 +649,20 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True, version
             # Normalize the job description to ensure consistent caching
             job_desc_normalized = job_description.strip().lower()
             
-            # Create a more robust combined input for hashing
-            combined_input = f"{resume_str}||{job_desc_normalized}||{version}"
-            cache_key = hashlib.md5(combined_input.encode()).hexdigest()
+            # Generate Redis cache key
+            cache_key = redis_cache.generate_key("analysis_v3", resume_str, job_desc_normalized, version)
             
             # Add logging to debug cache key generation
-            logger.info(f"Generated cache key: {cache_key[:8]}... for job desc length: {len(job_description)}")
+            logger.info(f"Generated cache key: {cache_key[:16]}... for job desc length: {len(job_description)}")
             
-            # Check if we have a cached result
-            if cache_key in _analysis_cache:
-                logger.info("Using cached analysis result")
-                return _analysis_cache[cache_key]
+            # Check Redis cache
+            cached_result = await redis_cache.get(cache_key)
+            if cached_result:
+                logger.info("Cache HIT - Using cached analysis result from Redis")
+                return cached_result
                 
-        # No cache hit, perform the analysis
+        # Cache miss - perform the analysis
+        logger.info("Cache MISS - Starting V3 resume analysis...")
         start_time = time.time()
         print("Starting LangChain resume analysis...")
         
@@ -802,15 +816,11 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True, version
                     points = skills_certifications_json['score'].get('pointsAwarded', 0)
                     skills_certifications_json['score']['matchPercentage'] = (points / 12) * 100 if points > 0 else 0
         
-        # Cache the result if caching is enabled
-        if use_cache and cache_key:
-            # If cache is full, remove oldest entry
-            if len(_analysis_cache) >= MAX_CACHE_SIZE:
-                oldest_key = next(iter(_analysis_cache))
-                del _analysis_cache[oldest_key]
-            
-            # Add new result to cache
-            _analysis_cache[cache_key] = result
+        # Cache the result in Redis if caching is enabled
+        if use_cache:
+            from app.core.config import settings
+            await redis_cache.set(cache_key, result, ttl=settings.cache_ttl_seconds)
+            logger.info("Cached analysis result in Redis")
         
         return result
     

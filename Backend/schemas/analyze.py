@@ -39,18 +39,18 @@ class ResumeStructureAnalysis(BaseModel):
     suggestedImprovements: Optional[str]
 
 class ResumeStructure(BaseModel):
-    score: GenericScore | dict
-    analysis: ResumeStructureAnalysis | dict
+    score: GenericScore
+    analysis: ResumeStructureAnalysis
 
 class AnalysisPayload(BaseModel):
-    keyword_match: dict | KeywordMatch
+    keyword_match: KeywordMatch
     job_experience: dict
     skills_certifications: dict
-    resume_structure: dict | ResumeStructure
+    resume_structure: ResumeStructure
     action_words: dict
     measurable_results: dict
     bullet_point_effectiveness: dict
-    overall_score: float | int | None = None
+    overall_score: Optional[float] = None
 
 class JobContext(BaseModel):
     title: str
@@ -59,5 +59,15 @@ class JobContext(BaseModel):
 
 class AnalyzeResponse(BaseModel):
     job_context: JobContext
-    analysis: AnalysisPayload
+    analysis: dict
     process_time_seconds: float
+
+class FilterJobDescriptionRequest(BaseModel):
+    text: str = Field(min_length=100, max_length=50000)
+
+class FilterJobDescriptionResponse(BaseModel):
+    filtered_text: str
+    original_length: int
+    filtered_length: int
+    reduction_percent: float
+

@@ -1,1 +1,997 @@
-{"job_context": {"title": "AI Agent / LLM & Automation Engineer", "company": "Rysysth Technologies", "description_length": 1900}, "analysis": {"overall_score": 57, "keyword_match": {"score": {"matchPercentage": 63, "pointsAwarded": 11, "rating": "Fair", "ratingSymbol": "\u26a0\ufe0f"}, "analysis": {"matchedKeywords": ["Python", "LangChain", "RAG", "AI/ML", "GenAI", "NLP", "Data Analysis", "APIs", "MongoDB"], "missingKeywords": ["LLMs (GPT-4, Claude, Gemini, Llama)", "AutoGen", "CrewAI", "Semantic Kernel", "Prompt Engineering", "HuggingFace", "Transformers", "Automation tools (Zapier, Make, Airflow)", "Webhooks", "Data integrations", "Vector databases (Pinecone, Weaviate, FAISS)", "Fine-tuning/customizing open-source LLMs", "Cloud platforms (AWS, GCP, Azure)", "UI/UX for chatbot or agent interfaces", ".NET", "ASP.NET", "C#", "Flask"], "suggestedImprovements": "To improve the match, consider adding experience or projects involving direct work with LLMs such as GPT-4, Claude, Gemini, or Llama. Highlight any hands-on use of agentic frameworks like AutoGen, CrewAI, or Semantic Kernel if applicable. If you have used prompt engineering techniques or worked with HuggingFace/Transformers libraries, mention these explicitly in your skills or project descriptions. Add any experience with automation tools (Zapier, Make, Airflow), webhooks, or integrating external data sources. If you have exposure to vector databases (Pinecone, Weaviate, FAISS), cloud platforms (AWS, GCP, Azure), or have worked on UI/UX for chatbot/agent interfaces, include these details. If you have used .NET, ASP.NET, C#, or Flask, mention relevant projects or coursework. Finally, if you have experience fine-tuning or customizing open-source LLMs, describe this in your projects or certifications."}}, "job_experience": {"score": {"alignmentPercentage": 25, "pointsAwarded": 5, "rating": "Weak match", "ratingSymbol": "\ud83d\uded1"}, "analysis": {"strongMatches": [{"responsibility": "Collaborate with data scientists, product managers, and engineers to design end-to-end AI solutions.", "status": "Strong Match", "notes": "Worked with a team of four on freelance projects, involved in requirements gathering and client communication."}], "partialMatches": [{"responsibility": "Design, develop, and deploy AI agents powered by LLMs (e.g., GPT-4 Claude, Gemini).", "status": "Partial Match", "notes": "Mentioned involvement in AI/ML projects, but no explicit reference to LLMs or agent development."}, {"responsibility": "Develop reusable prompt chains and workflows for common tasks and decision-making processes.", "status": "Partial Match", "notes": "General AI/ML involvement, but no mention of prompt engineering or workflow development."}], "missingExperience": [{"responsibility": "Integrate AI agents with tools, APIs, databases, and automation frameworks.", "status": "Missing", "notes": "No mention of integration with APIs, databases, or automation frameworks."}, {"responsibility": "Utilize frameworks such as LangChain, AutoGen, CrewAI, or Semantic Kernel to manage multi-agent architectures.", "status": "Missing", "notes": "No mention of experience with agentic frameworks."}, {"responsibility": "Fine-tune or instruct LLMs for specific use-cases or industry applications.", "status": "Missing", "notes": "No mention of fine-tuning or instructing LLMs."}, {"responsibility": "Optimize performance, reliability, and cost-efficiency of AI workflows.", "status": "Missing", "notes": "No mention of optimization tasks."}, {"responsibility": "Implement automation in internal tools, customer interactions, or operational pipelines using AI agents.", "status": "Missing", "notes": "No mention of automation implementation."}], "suggestedImprovements": "To better align with the job description, include experience with LLMs (e.g., GPT-4, Claude), agentic frameworks (LangChain, AutoGen, CrewAI), prompt engineering, and automation tools. Highlight any work with APIs, databases, and deployment of AI solutions. Experience with vector databases, fine-tuning LLMs, and cloud platforms would further strengthen alignment."}}, "skills_certifications": {"score": {"matchPercentage": 62, "educationMatchPercentage": 80, "educationPointsAwarded": 9, "educationRating": "Good", "educationRatingSymbol": "\ud83d\udc4d", "skillsMatchPercentage": 56, "skillsPointsAwarded": 5, "skillsRating": "Fair", "skillsRatingSymbol": "\u26a0\ufe0f", "totalPointsAwarded": 14, "totalMatchPercentage": 67, "pointsAwarded": 14, "rating": "Fair", "ratingSymbol": "\u26a0\ufe0f"}, "analysis": {"matchedSkills": [{"skill": "Python", "status": "Found in Resume", "symbol": "\u2705"}, {"skill": "LangChain", "status": "Found in Resume", "symbol": "\u2705"}, {"skill": "RAG", "status": "Found in Resume", "symbol": "\u2705"}, {"skill": "Data Analysis", "status": "Found in Resume", "symbol": "\u2705"}, {"skill": "ML algorithms", "status": "Found in Resume", "symbol": "\u2705"}, {"skill": "NLP", "status": "Found in Resume", "symbol": "\u2705"}, {"skill": "GenAI", "status": "Found in Resume", "symbol": "\u2705"}, {"skill": "Problem Solving", "status": "Found in Resume", "symbol": "\u2705"}], "missingSkills": [{"skill": "OpenAI GPT", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Anthropic Claude", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Meta Llama", "status": "Not Found", "symbol": "\u274c"}, {"skill": "AutoGen", "status": "Not Found", "symbol": "\u274c"}, {"skill": "CrewAI", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Semantic Kernel", "status": "Not Found", "symbol": "\u274c"}, {"skill": "HuggingFace", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Transformers", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Prompt Engineering", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Zapier", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Make", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Airflow", "status": "Not Found", "symbol": "\u274c"}, {"skill": "APIs", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Webhooks", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Data Integrations", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Vector databases (Pinecone, Weaviate, FAISS)", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Fine-tuning LLMs", "status": "Not Found", "symbol": "\u274c"}, {"skill": "Cloud platforms (AWS, GCP, Azure)", "status": "Not Found", "symbol": "\u274c"}, {"skill": "UI/UX for chatbot or agent interfaces", "status": "Not Found", "symbol": "\u274c"}], "educationMatch": [{"requirement": "No explicit education level or field of study specified", "status": "Found", "symbol": "\ud83c\udf93"}], "certificationMatch": [{"certification": "Data Analysis with Python", "status": "Found", "symbol": "\ud83c\udf93"}, {"certification": "Retrieval-Augmented Generation (RAG) with LangChain", "status": "Found", "symbol": "\ud83c\udf93"}, {"certification": "Kaggle Certifications", "status": "Found", "symbol": "\ud83c\udf93"}, {"certification": "Machine Learning and Neural Networks Summer School \u201923", "status": "Found", "symbol": "\ud83c\udf93"}, {"certification": "Masterclass on Data nuances and Aroma Detection", "status": "Found", "symbol": "\ud83c\udf93"}], "suggestedImprovements": "To improve the match for this AI Agent Developer role, the candidate should: (1) Gain hands-on experience with LLMs such as OpenAI GPT, Anthropic Claude, and Meta Llama, and explicitly list them in the skills section. (2) Acquire proficiency and demonstrate experience with agentic frameworks like AutoGen, CrewAI, and Semantic Kernel. (3) Add experience with HuggingFace, Transformers, and prompt engineering. (4) Learn and include automation tools such as Zapier, Make, and Airflow, as well as skills in API/webhook/data integration. (5) Develop familiarity with vector databases (Pinecone, Weaviate, FAISS), cloud platforms (AWS, GCP, Azure), and UI/UX for chatbot interfaces. (6) If possible, obtain certifications or training in these missing areas and update the resume accordingly."}}, "resume_structure": {"score": {"completedSections": 6, "totalMustHaveSections": 6, "pointsAwarded": 12, "ratingSymbol": "\u2705"}, "analysis": {"sectionStatus": [{"section": "Personal Information", "status": "Completed", "symbol": "\u2705"}, {"section": "Website/Social Links", "status": "Completed", "symbol": "\u2705"}, {"section": "Work Experience", "status": "Completed", "symbol": "\u2705"}, {"section": "Education", "status": "Completed", "symbol": "\u2705"}, {"section": "Skills and Interests", "status": "Completed", "symbol": "\u2705"}, {"section": "Certifications", "status": "Completed", "symbol": "\u2705"}, {"section": "Awards & Achievements", "status": "Missing", "symbol": "\u274c"}], "suggestedImprovements": "Your resume has all mandatory sections. Consider enhancing existing sections with more specific details for better ATS compatibility."}}, "action_words": {"score": {"actionVerbPercentage": 75, "pointsAwarded": 7, "ratingSymbol": "\ud83d\udc4d"}, "analysis": {"strongActionVerbs": [{"bulletPoint": "Worked with a team of four on freelance projects in web development and AI/ML.", "status": "Strong Action Word", "actionVerb": "Worked", "symbol": "\u2705"}, {"bulletPoint": "Contributed to AptiZ, a platform for aptitude prep.", "status": "Strong Action Word", "actionVerb": "Contributed", "symbol": "\u2705"}, {"bulletPoint": "Involved in requirements gathering, backend integration, and client communication.", "status": "Strong Action Word", "actionVerb": "Involved", "symbol": "\u2705"}], "weakActionVerbs": [{"bulletPoint": "Involved in requirements gathering, backend integration, and client communication.", "status": "Weak Action Word", "actionVerb": "Involved", "suggestedReplacement": "Led, Coordinated, Managed", "symbol": "\u26a0\ufe0f"}], "missingActionVerbs": [{"bulletPoint": "Developing a Python SDK and web dashboard to analyze and optimize LLM call usage across providers like OpenAI, Gemini, and Anthropic.", "status": "No Action Word", "suggestedReplacement": "Developed a Python SDK and web dashboard to analyze and optimize LLM call usage across providers like OpenAI, Gemini, and Anthropic.", "symbol": "\u274c"}, {"bulletPoint": "Created a Chrome extension to help job candidates improve their resumes for LinkedIn job applications.", "status": "No Action Word", "suggestedReplacement": "Created a Chrome extension to help job candidates improve their resumes for LinkedIn job applications.", "symbol": "\u274c"}, {"bulletPoint": "Built a platform where users can practice aptitude questions in groups or compete in battles.", "status": "No Action Word", "suggestedReplacement": "Built a platform enabling users to practice aptitude questions in groups or compete in battles.", "symbol": "\u274c"}], "suggestedImprovements": "The resume demonstrates good use of strong action verbs in the work experience section, with 75% of bullet points and descriptions starting with impactful verbs. However, some verbs like 'Involved' are weak and would benefit from stronger alternatives such as 'Led', 'Coordinated', or 'Managed'. Additionally, several project descriptions begin with participles or lack an action verb entirely; rewriting these to start with strong verbs like 'Developed', 'Created', or 'Built' will enhance clarity and impact. Overall, updating weak and missing action verbs will improve the resume's effectiveness and professionalism."}}, "measurable_results": {"score": {"measurableResultsCount": 1, "pointsAwarded": 4, "ratingSymbol": "\u26a0\ufe0f"}, "analysis": {"measurableResults": [{"bulletPoint": "Worked with a team of four on freelance projects in web development and AI/ML.", "metric": "team of four", "symbol": "\u2705"}], "opportunitiesForMetrics": [{"bulletPoint": "Contributed to AptiZ, a platform for aptitude prep.", "suggestion": "Specify the number of users, questions added, or improvement in user engagement (e.g., 'Contributed to AptiZ, increasing user base by 200+ in 3 months').", "symbol": "\u274c"}, {"bulletPoint": "Involved in requirements gathering, backend integration, and client communication.", "suggestion": "Add the number of clients served, projects completed, or efficiency improvements (e.g., 'Gathered requirements for 5+ projects, reducing development time by 20%').", "symbol": "\u274c"}, {"bulletPoint": "Developing a Python SDK and web dashboard to analyze and optimize LLM call usage across providers like OpenAI, Gemini, and Anthropic.", "suggestion": "Include metrics such as reduction in API costs, speed improvements, or number of users (e.g., 'Optimized LLM call usage, reducing API costs by 15%').", "symbol": "\u274c"}, {"bulletPoint": "Created a Chrome extension to help job candidates improve their resumes for LinkedIn job applications.", "suggestion": "Mention number of downloads, user ratings, or measurable improvements for users (e.g., 'Chrome extension with 500+ downloads and 4.8/5 rating').", "symbol": "\u274c"}, {"bulletPoint": "Built a platform where users can practice aptitude questions in groups or compete in battles.", "suggestion": "Add number of users, questions, or engagement statistics (e.g., 'Platform with 1000+ registered users and 10,000+ questions attempted').", "symbol": "\u274c"}], "suggestedImprovements": "To strengthen the resume, add specific, quantifiable metrics to your achievements and project descriptions. For example, include the number of users impacted, percentage improvements, time saved, or other measurable outcomes. This will make your contributions clearer and more impressive to recruiters."}}, "bullet_point_effectiveness": {"score": {"effectiveBulletPercentage": 50, "pointsAwarded": 4, "ratingSymbol": "\u26a0\ufe0f"}, "analysis": {"effectiveBullets": [{"bulletPoint": "Worked with a team of four on freelance projects in web development and AI/ML.", "wordCount": 16, "status": "Effective", "strengths": "Begins with action verb, concise, specifies team size and project domains, demonstrates collaboration and technical breadth.", "symbol": "\u2705"}, {"bulletPoint": "Involved in requirements gathering, backend integration, and client communication.", "wordCount": 10, "status": "Effective", "strengths": "Concise, starts with action verb, clearly lists specific responsibilities, shows breadth of involvement.", "symbol": "\u2705"}], "ineffectiveBullets": [{"bulletPoint": "Contributed to AptiZ, a platform for aptitude prep.", "wordCount": 9, "status": "Ineffective", "issues": "Lacks specificity about the contribution, impact not demonstrated, somewhat vague.", "suggestedRevision": "Developed core features for AptiZ, enhancing user engagement by 30% on the aptitude prep platform.", "symbol": "\u274c"}], "suggestedImprovements": "To improve bullet point effectiveness, ensure each bullet starts with a strong action verb, is specific about your role and achievements, and quantifies impact where possible. Avoid vague statements\u2014clarify your unique contributions and the results. Aim for 8-15 words per bullet for conciseness, and focus on outcomes or skills demonstrated."}}}, "process_time_seconds": 13.69}
+{
+    "job_context": {
+        "title": "Lead AI Developer",
+        "company": "GE Vernova",
+        "description_length": 3694
+    },
+    "analysis": {
+        "version": "v4.0",
+        "timestamp": "2026-02-12T04:21:29.673910+00:00",
+        "jobFitScore": {
+            "score": 45.0,
+            "label": "Low Fit",
+            "components": {
+                "keywordMatch": {
+                    "score": {
+                        "matchPercentage": 57.0,
+                        "pointsAwarded": 20.0,
+                        "maxPoints": 35,
+                        "rating": "Fair",
+                        "ratingSymbol": "\u26a0\ufe0f"
+                    },
+                    "analysis": {
+                        "strongMatches": [
+                            {
+                                "keyword": "AI/ML",
+                                "points": 2,
+                                "similarity": 0.85,
+                                "status": "Strong Match",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "keyword": "Data Analysis",
+                                "points": 2,
+                                "similarity": 0.82,
+                                "status": "Strong Match",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "keyword": "LangChain",
+                                "points": 2,
+                                "similarity": 0.88,
+                                "status": "Strong Match",
+                                "symbol": "\u2705"
+                            }
+                        ],
+                        "partialMatches": [
+                            {
+                                "keyword": "Data governance",
+                                "points": 1,
+                                "similarity": 0.7,
+                                "status": "Partial Match",
+                                "symbol": "\u26a0\ufe0f"
+                            },
+                            {
+                                "keyword": "Model risk management",
+                                "points": 1,
+                                "similarity": 0.68,
+                                "status": "Partial Match",
+                                "symbol": "\u26a0\ufe0f"
+                            },
+                            {
+                                "keyword": "Python",
+                                "points": 1,
+                                "similarity": 0.75,
+                                "status": "Partial Match",
+                                "symbol": "\u26a0\ufe0f"
+                            },
+                            {
+                                "keyword": "FastAPI",
+                                "points": 1,
+                                "similarity": 0.7,
+                                "status": "Partial Match",
+                                "symbol": "\u26a0\ufe0f"
+                            }
+                        ],
+                        "missingKeywords": [
+                            {
+                                "keyword": "AI Architect",
+                                "points": -1,
+                                "status": "Missing Critical",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "keyword": "Platform standards",
+                                "points": -1,
+                                "status": "Missing Critical",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "keyword": "Governance",
+                                "points": -1,
+                                "status": "Missing Critical",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "keyword": "Security",
+                                "points": -1,
+                                "status": "Missing Critical",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "keyword": "Compliance",
+                                "points": -1,
+                                "status": "Missing Critical",
+                                "symbol": "\u274c"
+                            }
+                        ],
+                        "keywordStuffing": [],
+                        "suggestedImprovements": "Focus on adding more specific experience related to AI architecture, platform standards, governance, and security. Highlight any experience with compliance and risk management in AI projects. Consider detailing any leadership roles or responsibilities in AI/ML projects."
+                    }
+                },
+                "experienceAlignment": {
+                    "score": {
+                        "alignmentPercentage": 25.0,
+                        "pointsAwarded": 15.0,
+                        "maxPoints": 30,
+                        "rawScore": 3.0,
+                        "expectedMax": 6,
+                        "numberOfRelevantRoles": 2,
+                        "rating": "Partial Match",
+                        "ratingSymbol": "\u26a0\ufe0f"
+                    },
+                    "analysis": {
+                        "strongMatches": [],
+                        "partialMatches": [
+                            {
+                                "role": "Developer and Project Collaborator",
+                                "points": 1.5,
+                                "status": "Partial Match",
+                                "notes": "Experience in AI/ML projects and client communication is transferable to AI Architect role.",
+                                "symbol": "\u26a0\ufe0f"
+                            },
+                            {
+                                "role": "AI Summer Intern",
+                                "points": 1.5,
+                                "status": "Partial Match",
+                                "notes": "Hands-on experience with AI frameworks and tools is relevant to AI Architect responsibilities.",
+                                "symbol": "\u26a0\ufe0f"
+                            }
+                        ],
+                        "misalignedRoles": [],
+                        "suggestedImprovements": "Gain more experience in AI architecture, platform standards, and governance. Develop skills in model risk management, data privacy, and cybersecurity to align better with the AI Architect role."
+                    }
+                },
+                "educationRequirement": {
+                    "score": {
+                        "pointsAwarded": 0.0,
+                        "maxPoints": 20,
+                        "passed": false,
+                        "rating": "Requirement Not Met",
+                        "ratingSymbol": "\u274c"
+                    },
+                    "analysis": {
+                        "degreeFound": "B.E.",
+                        "degreeType": "None",
+                        "fieldOfStudy": "Computer Science and Engineering (Data Science)",
+                        "status": "Fail",
+                        "symbol": "\u274c",
+                        "suggestedImprovements": "The candidate is currently pursuing a B.E. degree and has not yet graduated. To meet the requirement, the candidate should complete their Bachelor's degree."
+                    }
+                },
+                "skillsToolsMatch": {
+                    "score": {
+                        "matchPercentage": 66.7,
+                        "pointsAwarded": 10.0,
+                        "maxPoints": 15,
+                        "rating": "Good",
+                        "ratingSymbol": "\ud83d\udc4d"
+                    },
+                    "analysis": {
+                        "hardSkillMatches": [
+                            {
+                                "skill": "Python",
+                                "points": 1.0,
+                                "deduplicationApplied": false,
+                                "status": "Found",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "skill": "NLP",
+                                "points": 1.0,
+                                "deduplicationApplied": false,
+                                "status": "Found",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "skill": "RAG",
+                                "points": 1.0,
+                                "deduplicationApplied": false,
+                                "status": "Found",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "skill": "Data Analysis",
+                                "points": 1.0,
+                                "deduplicationApplied": false,
+                                "status": "Found",
+                                "symbol": "\u2705"
+                            }
+                        ],
+                        "softSkillMatches": [
+                            {
+                                "skill": "Leadership",
+                                "points": 0.5,
+                                "deduplicationApplied": false,
+                                "status": "Found",
+                                "symbol": "\u2705"
+                            }
+                        ],
+                        "missingSkills": [
+                            {
+                                "skill": "Systems thinking",
+                                "points": -1,
+                                "skillType": "hard",
+                                "status": "Missing Critical",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "skill": "Business acumen",
+                                "points": -1,
+                                "skillType": "soft",
+                                "status": "Missing Critical",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "skill": "Clear communication",
+                                "points": -1,
+                                "skillType": "soft",
+                                "status": "Missing Critical",
+                                "symbol": "\u274c"
+                            }
+                        ],
+                        "doubleCountReductions": [],
+                        "suggestedImprovements": "Consider gaining experience in systems thinking and business acumen to align with the job requirements. Additionally, enhancing communication skills would be beneficial."
+                    }
+                }
+            }
+        },
+        "resumeQualityScore": {
+            "score": 51.0,
+            "tier": "Refine for Impact",
+            "components": {
+                "structure": {
+                    "score": {
+                        "pointsAwarded": 30.0,
+                        "maxPoints": 30,
+                        "completedSections": 4,
+                        "totalRequiredSections": 4,
+                        "rating": "Excellent",
+                        "ratingSymbol": "\u2705"
+                    },
+                    "analysis": {
+                        "sectionStatus": [
+                            {
+                                "section": "Personal Information",
+                                "status": "Completed",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "section": "Website/Social Links",
+                                "status": "Completed",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "section": "Work Experience",
+                                "status": "Completed",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "section": "Education",
+                                "status": "Completed",
+                                "symbol": "\u2705"
+                            }
+                        ],
+                        "missingRequiredSections": [],
+                        "atsIssues": [],
+                        "suggestedImprovements": "All required sections present. Ensure ATS-friendly formatting."
+                    }
+                },
+                "actionWords": {
+                    "score": {
+                        "actionVerbPercentage": 44.0,
+                        "pointsAwarded": 11.0,
+                        "maxPoints": 25,
+                        "rating": "Fair",
+                        "ratingSymbol": "\u26a0\ufe0f"
+                    },
+                    "analysis": {
+                        "strongActionVerbs": [
+                            {
+                                "bulletPoint": "Created a Chrome extension to help job candidates improve their resumes for LinkedIn job applications.",
+                                "actionVerb": "Created",
+                                "points": 1,
+                                "status": "Strong Action Word",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "bulletPoint": "Designed features to calculate a match score and provide personalized suggestions to make resumes more effective.",
+                                "actionVerb": "Designed",
+                                "points": 1,
+                                "status": "Strong Action Word",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "bulletPoint": "Built a platform where users can practice aptitude questions in groups or compete in battles.",
+                                "actionVerb": "Built",
+                                "points": 1,
+                                "status": "Strong Action Word",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "bulletPoint": "Implemented a FastAPI for predictions and a Streamlit app for user interaction.",
+                                "actionVerb": "Implemented",
+                                "points": 1,
+                                "status": "Strong Action Word",
+                                "symbol": "\u2705"
+                            }
+                        ],
+                        "weakActionVerbs": [
+                            {
+                                "bulletPoint": "Worked with a team of four on freelance projects in web development and AI/ML.",
+                                "actionVerb": "Worked",
+                                "points": -0.5,
+                                "suggestedReplacement": "Collaborated",
+                                "status": "Weak Action Word",
+                                "symbol": "\u26a0\ufe0f"
+                            },
+                            {
+                                "bulletPoint": "Contributed to AptiZ, a platform for aptitude prep.",
+                                "actionVerb": "Contributed",
+                                "points": -0.5,
+                                "suggestedReplacement": "Developed",
+                                "status": "Weak Action Word",
+                                "symbol": "\u26a0\ufe0f"
+                            },
+                            {
+                                "bulletPoint": "Involved in requirements gathering, backend integration, and client communication.",
+                                "actionVerb": "Involved",
+                                "points": -0.5,
+                                "suggestedReplacement": "Led",
+                                "status": "Weak Action Word",
+                                "symbol": "\u26a0\ufe0f"
+                            },
+                            {
+                                "bulletPoint": "Gained experience in planning, handling feedback, and meeting deadlines.",
+                                "actionVerb": "Gained",
+                                "points": -0.5,
+                                "suggestedReplacement": "Acquired",
+                                "status": "Weak Action Word",
+                                "symbol": "\u26a0\ufe0f"
+                            },
+                            {
+                                "bulletPoint": "Worked on Generative and Agentic AI technologies.",
+                                "actionVerb": "Worked",
+                                "points": -0.5,
+                                "suggestedReplacement": "Developed",
+                                "status": "Weak Action Word",
+                                "symbol": "\u26a0\ufe0f"
+                            }
+                        ],
+                        "clichesAndBuzzwords": [],
+                        "suggestedImprovements": "Use more strong action verbs to describe achievements and responsibilities. Replace weak verbs with more impactful alternatives to enhance the professional tone of the resume."
+                    }
+                },
+                "measurableResults": {
+                    "score": {
+                        "measurableResultsCount": 0,
+                        "pointsAwarded": 0.0,
+                        "maxPoints": 25,
+                        "rating": "Poor",
+                        "ratingSymbol": "\u274c"
+                    },
+                    "analysis": {
+                        "measurableResults": [],
+                        "opportunitiesForMetrics": [
+                            {
+                                "bulletPoint": "Worked with a team of four on freelance projects in web development and AI/ML.",
+                                "suggestion": "Specify number of projects completed or any measurable impact on project outcomes.",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "bulletPoint": "Contributed to AptiZ, a platform for aptitude prep.",
+                                "suggestion": "Include user growth or engagement statistics.",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "bulletPoint": "Involved in requirements gathering, backend integration, and client communication.",
+                                "suggestion": "Mention specific improvements in client satisfaction or project delivery times.",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "bulletPoint": "Gained experience in planning, handling feedback, and meeting deadlines.",
+                                "suggestion": "Quantify the number of projects delivered on time or improvements in feedback handling.",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "bulletPoint": "Worked on Generative and Agentic AI technologies.",
+                                "suggestion": "Detail specific project outcomes or advancements achieved.",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "bulletPoint": "Hands-on projects involving GenAI applications and agentic AI system development.",
+                                "suggestion": "Include specific project results or performance improvements.",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "bulletPoint": "Gained practical experience with AI frameworks and tools for building intelligent agent solutions.",
+                                "suggestion": "Mention any measurable improvements in AI solution performance.",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "bulletPoint": "Designed features to calculate a match score and provide personalized suggestions to make resumes more effective.",
+                                "suggestion": "Include metrics on user engagement or improvement in resume effectiveness.",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "bulletPoint": "Added features like user profiles, friend system, and performance tracking.",
+                                "suggestion": "Provide statistics on user engagement or feature usage.",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "bulletPoint": "Preprocessed reviews by removing emojis, stopwords, and applied lemmatization.",
+                                "suggestion": "Include accuracy improvements or processing speed metrics.",
+                                "symbol": "\u274c"
+                            }
+                        ],
+                        "suggestedImprovements": "To improve the score, include specific metrics such as user growth, time saved, performance improvements, or any quantifiable impact of your work."
+                    }
+                },
+                "bulletEffectiveness": {
+                    "score": {
+                        "effectiveBulletPercentage": 50.0,
+                        "pointsAwarded": 10.0,
+                        "maxPoints": 20,
+                        "rating": "Fair",
+                        "ratingSymbol": "\u26a0\ufe0f"
+                    },
+                    "analysis": {
+                        "effectiveBullets": [
+                            {
+                                "bulletPoint": "Worked with a team of four on freelance projects in web development and AI/ML.",
+                                "wordCount": 14,
+                                "characterCount": 84,
+                                "points": 2,
+                                "status": "Effective",
+                                "strengths": "Concise, clear task description, team collaboration highlighted",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "bulletPoint": "Contributed to AptiZ, a platform for aptitude prep.",
+                                "wordCount": 8,
+                                "characterCount": 48,
+                                "points": 2,
+                                "status": "Effective",
+                                "strengths": "Clear contribution, highlights specific project",
+                                "symbol": "\u2705"
+                            },
+                            {
+                                "bulletPoint": "Worked on Generative and Agentic AI technologies.",
+                                "wordCount": 6,
+                                "characterCount": 45,
+                                "points": 2,
+                                "status": "Effective",
+                                "strengths": "Specific technologies mentioned, concise",
+                                "symbol": "\u2705"
+                            }
+                        ],
+                        "ineffectiveBullets": [
+                            {
+                                "bulletPoint": "Involved in requirements gathering, backend integration, and client communication.",
+                                "wordCount": 9,
+                                "characterCount": 82,
+                                "points": -0.5,
+                                "status": "Ineffective",
+                                "issues": "Lacks clear impact, vague task description",
+                                "suggestedRevision": "Led requirements gathering, integrated backend, and facilitated client communication to enhance project delivery.",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "bulletPoint": "Gained experience in planning, handling feedback, and meeting deadlines.",
+                                "wordCount": 9,
+                                "characterCount": 72,
+                                "points": -0.5,
+                                "status": "Ineffective",
+                                "issues": "Vague impact, lacks specific achievements",
+                                "suggestedRevision": "Successfully planned projects, incorporated feedback, and consistently met deadlines, improving team efficiency.",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "bulletPoint": "Hands-on projects involving GenAI applications and agentic AI system development.",
+                                "wordCount": 9,
+                                "characterCount": 78,
+                                "points": -0.5,
+                                "status": "Ineffective",
+                                "issues": "Lacks specific outcomes or impact",
+                                "suggestedRevision": "Developed GenAI applications and agentic AI systems, enhancing practical skills and project outcomes.",
+                                "symbol": "\u274c"
+                            },
+                            {
+                                "bulletPoint": "Gained practical experience with AI frameworks and tools for building intelligent agent solutions.",
+                                "wordCount": 13,
+                                "characterCount": 90,
+                                "points": 2,
+                                "status": "Effective",
+                                "strengths": "Highlights practical experience, specific tools mentioned",
+                                "symbol": "\u2705"
+                            }
+                        ],
+                        "suggestedImprovements": "Focus on specifying the impact of tasks and achievements. Use action verbs and quantify results where possible to enhance clarity and effectiveness."
+                    }
+                }
+            }
+        },
+        "context": {
+            "careerStage": "Entry-Level",
+            "industry": "Tech/Engineering",
+            "yearsOfExperience": 0.0
+        },
+        "overall_score": 45.0,
+        "keyword_match": {
+            "score": {
+                "matchPercentage": 57.0,
+                "pointsAwarded": 20.0,
+                "maxPoints": 35,
+                "rating": "Fair",
+                "ratingSymbol": "\u26a0\ufe0f"
+            },
+            "analysis": {
+                "strongMatches": [
+                    {
+                        "keyword": "AI/ML",
+                        "points": 2,
+                        "similarity": 0.85,
+                        "status": "Strong Match",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "keyword": "Data Analysis",
+                        "points": 2,
+                        "similarity": 0.82,
+                        "status": "Strong Match",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "keyword": "LangChain",
+                        "points": 2,
+                        "similarity": 0.88,
+                        "status": "Strong Match",
+                        "symbol": "\u2705"
+                    }
+                ],
+                "partialMatches": [
+                    {
+                        "keyword": "Data governance",
+                        "points": 1,
+                        "similarity": 0.7,
+                        "status": "Partial Match",
+                        "symbol": "\u26a0\ufe0f"
+                    },
+                    {
+                        "keyword": "Model risk management",
+                        "points": 1,
+                        "similarity": 0.68,
+                        "status": "Partial Match",
+                        "symbol": "\u26a0\ufe0f"
+                    },
+                    {
+                        "keyword": "Python",
+                        "points": 1,
+                        "similarity": 0.75,
+                        "status": "Partial Match",
+                        "symbol": "\u26a0\ufe0f"
+                    },
+                    {
+                        "keyword": "FastAPI",
+                        "points": 1,
+                        "similarity": 0.7,
+                        "status": "Partial Match",
+                        "symbol": "\u26a0\ufe0f"
+                    }
+                ],
+                "missingKeywords": [
+                    {
+                        "keyword": "AI Architect",
+                        "points": -1,
+                        "status": "Missing Critical",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "keyword": "Platform standards",
+                        "points": -1,
+                        "status": "Missing Critical",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "keyword": "Governance",
+                        "points": -1,
+                        "status": "Missing Critical",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "keyword": "Security",
+                        "points": -1,
+                        "status": "Missing Critical",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "keyword": "Compliance",
+                        "points": -1,
+                        "status": "Missing Critical",
+                        "symbol": "\u274c"
+                    }
+                ],
+                "keywordStuffing": [],
+                "suggestedImprovements": "Focus on adding more specific experience related to AI architecture, platform standards, governance, and security. Highlight any experience with compliance and risk management in AI projects. Consider detailing any leadership roles or responsibilities in AI/ML projects."
+            }
+        },
+        "job_experience": {
+            "score": {
+                "alignmentPercentage": 25.0,
+                "pointsAwarded": 15.0,
+                "maxPoints": 30,
+                "rawScore": 3.0,
+                "expectedMax": 6,
+                "numberOfRelevantRoles": 2,
+                "rating": "Partial Match",
+                "ratingSymbol": "\u26a0\ufe0f"
+            },
+            "analysis": {
+                "strongMatches": [],
+                "partialMatches": [
+                    {
+                        "role": "Developer and Project Collaborator",
+                        "points": 1.5,
+                        "status": "Partial Match",
+                        "notes": "Experience in AI/ML projects and client communication is transferable to AI Architect role.",
+                        "symbol": "\u26a0\ufe0f"
+                    },
+                    {
+                        "role": "AI Summer Intern",
+                        "points": 1.5,
+                        "status": "Partial Match",
+                        "notes": "Hands-on experience with AI frameworks and tools is relevant to AI Architect responsibilities.",
+                        "symbol": "\u26a0\ufe0f"
+                    }
+                ],
+                "misalignedRoles": [],
+                "suggestedImprovements": "Gain more experience in AI architecture, platform standards, and governance. Develop skills in model risk management, data privacy, and cybersecurity to align better with the AI Architect role."
+            }
+        },
+        "skills_certifications": {
+            "score": {
+                "matchPercentage": 66.7,
+                "pointsAwarded": 10.0,
+                "maxPoints": 15,
+                "rating": "Good",
+                "ratingSymbol": "\ud83d\udc4d"
+            },
+            "analysis": {
+                "hardSkillMatches": [
+                    {
+                        "skill": "Python",
+                        "points": 1.0,
+                        "deduplicationApplied": false,
+                        "status": "Found",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "skill": "NLP",
+                        "points": 1.0,
+                        "deduplicationApplied": false,
+                        "status": "Found",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "skill": "RAG",
+                        "points": 1.0,
+                        "deduplicationApplied": false,
+                        "status": "Found",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "skill": "Data Analysis",
+                        "points": 1.0,
+                        "deduplicationApplied": false,
+                        "status": "Found",
+                        "symbol": "\u2705"
+                    }
+                ],
+                "softSkillMatches": [
+                    {
+                        "skill": "Leadership",
+                        "points": 0.5,
+                        "deduplicationApplied": false,
+                        "status": "Found",
+                        "symbol": "\u2705"
+                    }
+                ],
+                "missingSkills": [
+                    {
+                        "skill": "Systems thinking",
+                        "points": -1,
+                        "skillType": "hard",
+                        "status": "Missing Critical",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "skill": "Business acumen",
+                        "points": -1,
+                        "skillType": "soft",
+                        "status": "Missing Critical",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "skill": "Clear communication",
+                        "points": -1,
+                        "skillType": "soft",
+                        "status": "Missing Critical",
+                        "symbol": "\u274c"
+                    }
+                ],
+                "doubleCountReductions": [],
+                "suggestedImprovements": "Consider gaining experience in systems thinking and business acumen to align with the job requirements. Additionally, enhancing communication skills would be beneficial."
+            }
+        },
+        "resume_structure": {
+            "score": {
+                "pointsAwarded": 30.0,
+                "maxPoints": 30,
+                "completedSections": 4,
+                "totalRequiredSections": 4,
+                "rating": "Excellent",
+                "ratingSymbol": "\u2705"
+            },
+            "analysis": {
+                "sectionStatus": [
+                    {
+                        "section": "Personal Information",
+                        "status": "Completed",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "section": "Website/Social Links",
+                        "status": "Completed",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "section": "Work Experience",
+                        "status": "Completed",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "section": "Education",
+                        "status": "Completed",
+                        "symbol": "\u2705"
+                    }
+                ],
+                "missingRequiredSections": [],
+                "atsIssues": [],
+                "suggestedImprovements": "All required sections present. Ensure ATS-friendly formatting."
+            }
+        },
+        "action_words": {
+            "score": {
+                "actionVerbPercentage": 44.0,
+                "pointsAwarded": 11.0,
+                "maxPoints": 25,
+                "rating": "Fair",
+                "ratingSymbol": "\u26a0\ufe0f"
+            },
+            "analysis": {
+                "strongActionVerbs": [
+                    {
+                        "bulletPoint": "Created a Chrome extension to help job candidates improve their resumes for LinkedIn job applications.",
+                        "actionVerb": "Created",
+                        "points": 1,
+                        "status": "Strong Action Word",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "bulletPoint": "Designed features to calculate a match score and provide personalized suggestions to make resumes more effective.",
+                        "actionVerb": "Designed",
+                        "points": 1,
+                        "status": "Strong Action Word",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "bulletPoint": "Built a platform where users can practice aptitude questions in groups or compete in battles.",
+                        "actionVerb": "Built",
+                        "points": 1,
+                        "status": "Strong Action Word",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "bulletPoint": "Implemented a FastAPI for predictions and a Streamlit app for user interaction.",
+                        "actionVerb": "Implemented",
+                        "points": 1,
+                        "status": "Strong Action Word",
+                        "symbol": "\u2705"
+                    }
+                ],
+                "weakActionVerbs": [
+                    {
+                        "bulletPoint": "Worked with a team of four on freelance projects in web development and AI/ML.",
+                        "actionVerb": "Worked",
+                        "points": -0.5,
+                        "suggestedReplacement": "Collaborated",
+                        "status": "Weak Action Word",
+                        "symbol": "\u26a0\ufe0f"
+                    },
+                    {
+                        "bulletPoint": "Contributed to AptiZ, a platform for aptitude prep.",
+                        "actionVerb": "Contributed",
+                        "points": -0.5,
+                        "suggestedReplacement": "Developed",
+                        "status": "Weak Action Word",
+                        "symbol": "\u26a0\ufe0f"
+                    },
+                    {
+                        "bulletPoint": "Involved in requirements gathering, backend integration, and client communication.",
+                        "actionVerb": "Involved",
+                        "points": -0.5,
+                        "suggestedReplacement": "Led",
+                        "status": "Weak Action Word",
+                        "symbol": "\u26a0\ufe0f"
+                    },
+                    {
+                        "bulletPoint": "Gained experience in planning, handling feedback, and meeting deadlines.",
+                        "actionVerb": "Gained",
+                        "points": -0.5,
+                        "suggestedReplacement": "Acquired",
+                        "status": "Weak Action Word",
+                        "symbol": "\u26a0\ufe0f"
+                    },
+                    {
+                        "bulletPoint": "Worked on Generative and Agentic AI technologies.",
+                        "actionVerb": "Worked",
+                        "points": -0.5,
+                        "suggestedReplacement": "Developed",
+                        "status": "Weak Action Word",
+                        "symbol": "\u26a0\ufe0f"
+                    }
+                ],
+                "clichesAndBuzzwords": [],
+                "suggestedImprovements": "Use more strong action verbs to describe achievements and responsibilities. Replace weak verbs with more impactful alternatives to enhance the professional tone of the resume."
+            }
+        },
+        "measurable_results": {
+            "score": {
+                "measurableResultsCount": 0,
+                "pointsAwarded": 0.0,
+                "maxPoints": 25,
+                "rating": "Poor",
+                "ratingSymbol": "\u274c"
+            },
+            "analysis": {
+                "measurableResults": [],
+                "opportunitiesForMetrics": [
+                    {
+                        "bulletPoint": "Worked with a team of four on freelance projects in web development and AI/ML.",
+                        "suggestion": "Specify number of projects completed or any measurable impact on project outcomes.",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "bulletPoint": "Contributed to AptiZ, a platform for aptitude prep.",
+                        "suggestion": "Include user growth or engagement statistics.",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "bulletPoint": "Involved in requirements gathering, backend integration, and client communication.",
+                        "suggestion": "Mention specific improvements in client satisfaction or project delivery times.",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "bulletPoint": "Gained experience in planning, handling feedback, and meeting deadlines.",
+                        "suggestion": "Quantify the number of projects delivered on time or improvements in feedback handling.",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "bulletPoint": "Worked on Generative and Agentic AI technologies.",
+                        "suggestion": "Detail specific project outcomes or advancements achieved.",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "bulletPoint": "Hands-on projects involving GenAI applications and agentic AI system development.",
+                        "suggestion": "Include specific project results or performance improvements.",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "bulletPoint": "Gained practical experience with AI frameworks and tools for building intelligent agent solutions.",
+                        "suggestion": "Mention any measurable improvements in AI solution performance.",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "bulletPoint": "Designed features to calculate a match score and provide personalized suggestions to make resumes more effective.",
+                        "suggestion": "Include metrics on user engagement or improvement in resume effectiveness.",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "bulletPoint": "Added features like user profiles, friend system, and performance tracking.",
+                        "suggestion": "Provide statistics on user engagement or feature usage.",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "bulletPoint": "Preprocessed reviews by removing emojis, stopwords, and applied lemmatization.",
+                        "suggestion": "Include accuracy improvements or processing speed metrics.",
+                        "symbol": "\u274c"
+                    }
+                ],
+                "suggestedImprovements": "To improve the score, include specific metrics such as user growth, time saved, performance improvements, or any quantifiable impact of your work."
+            }
+        },
+        "bullet_point_effectiveness": {
+            "score": {
+                "effectiveBulletPercentage": 50.0,
+                "pointsAwarded": 10.0,
+                "maxPoints": 20,
+                "rating": "Fair",
+                "ratingSymbol": "\u26a0\ufe0f"
+            },
+            "analysis": {
+                "effectiveBullets": [
+                    {
+                        "bulletPoint": "Worked with a team of four on freelance projects in web development and AI/ML.",
+                        "wordCount": 14,
+                        "characterCount": 84,
+                        "points": 2,
+                        "status": "Effective",
+                        "strengths": "Concise, clear task description, team collaboration highlighted",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "bulletPoint": "Contributed to AptiZ, a platform for aptitude prep.",
+                        "wordCount": 8,
+                        "characterCount": 48,
+                        "points": 2,
+                        "status": "Effective",
+                        "strengths": "Clear contribution, highlights specific project",
+                        "symbol": "\u2705"
+                    },
+                    {
+                        "bulletPoint": "Worked on Generative and Agentic AI technologies.",
+                        "wordCount": 6,
+                        "characterCount": 45,
+                        "points": 2,
+                        "status": "Effective",
+                        "strengths": "Specific technologies mentioned, concise",
+                        "symbol": "\u2705"
+                    }
+                ],
+                "ineffectiveBullets": [
+                    {
+                        "bulletPoint": "Involved in requirements gathering, backend integration, and client communication.",
+                        "wordCount": 9,
+                        "characterCount": 82,
+                        "points": -0.5,
+                        "status": "Ineffective",
+                        "issues": "Lacks clear impact, vague task description",
+                        "suggestedRevision": "Led requirements gathering, integrated backend, and facilitated client communication to enhance project delivery.",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "bulletPoint": "Gained experience in planning, handling feedback, and meeting deadlines.",
+                        "wordCount": 9,
+                        "characterCount": 72,
+                        "points": -0.5,
+                        "status": "Ineffective",
+                        "issues": "Vague impact, lacks specific achievements",
+                        "suggestedRevision": "Successfully planned projects, incorporated feedback, and consistently met deadlines, improving team efficiency.",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "bulletPoint": "Hands-on projects involving GenAI applications and agentic AI system development.",
+                        "wordCount": 9,
+                        "characterCount": 78,
+                        "points": -0.5,
+                        "status": "Ineffective",
+                        "issues": "Lacks specific outcomes or impact",
+                        "suggestedRevision": "Developed GenAI applications and agentic AI systems, enhancing practical skills and project outcomes.",
+                        "symbol": "\u274c"
+                    },
+                    {
+                        "bulletPoint": "Gained practical experience with AI frameworks and tools for building intelligent agent solutions.",
+                        "wordCount": 13,
+                        "characterCount": 90,
+                        "points": 2,
+                        "status": "Effective",
+                        "strengths": "Highlights practical experience, specific tools mentioned",
+                        "symbol": "\u2705"
+                    }
+                ],
+                "suggestedImprovements": "Focus on specifying the impact of tasks and achievements. Use action verbs and quantify results where possible to enhance clarity and effectiveness."
+            }
+        }
+    },
+    "process_time_seconds": 8.95
+}

@@ -1,15 +1,10 @@
 import json
-import os
 import time
 import logging
+import asyncio
 import hashlib
-# Import LangChain components
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.globals import set_debug
-from langchain_core.caches import InMemoryCache
-from langchain_core.runnables import RunnableParallel, RunnableLambda
+from typing import Dict, Any
+
 from .action_words import action_words
 from .keyword_match import keyword_match
 from .job_experience import job_experience
@@ -19,38 +14,18 @@ from .bullet_point_effectiveness import bullet_point_effectiveness
 from app.services.openai_model import gen_model
 from app.prompts.templates import skills_tools_relevance_prompt
 from .resume_analysis import resume_structure
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+from app.core.config import settings
+from app.cache.redis_cache import redis_cache
+from .async_analysis import (
+    keyword_match_async,
+    job_experience_async,
+    education_certifications_async,
+    action_words_async,
+    measurable_results_async,
+    bullet_point_effectiveness_async
 )
+
 logger = logging.getLogger(__name__)
-
-# Initialize environment variables
-api_key = os.environ.get("OPENAI_API_KEY")
-if not api_key:
-    raise ValueError("OPENAI_API_KEY environment variable is not set")
-
-# Set up LangChain caching for better performance
-from langchain_core.globals import set_llm_cache
-set_llm_cache(InMemoryCache())
-
-# Create LLM instance with caching enabled
-llm = ChatOpenAI(
-    model="gpt-4o",  # Updated to latest model
-    temperature=0.3,
-    max_tokens=8000,
-    api_key=api_key
-)
-
-# Create a memory cache for entire analysis results
-from functools import lru_cache
-import hashlib
-
-# Create a cache with a maximum size of 100 items
-_analysis_cache = {}
-MAX_CACHE_SIZE = 100
 
 # Updated resume sections based on V3 specifications
 resume_sections = [
@@ -67,7 +42,7 @@ resume_sections = [
     {"section": "Publications", "symbol": "💡", "mandatory": False}
 ]
 
-def evaluate_resume_sections(resume_json):
+def evaluate_resume_sections(resume_json: Dict[str, Any]) -> Dict[str, Any]:
     """
     Evaluate the presence of sections in a resume JSON against mandatory and optional indicators.
     Updated for V3 scoring system.
@@ -92,18 +67,17 @@ def evaluate_resume_sections(resume_json):
             else:
                 result["missing"]["optional"].append(section_name)
     
-    print(result)
+    logger.debug(f"Resume sections evaluation: {result}")
     return result
 
 
 
-def skills_tools_relevance(skills, job_description):
+def skills_tools_relevance(skills: Any, job_description: str) -> Dict[str, Any]:
     """
     Updated skills & tools relevance analysis based on V3 scoring system (15 points max).
     Includes double-counting prevention logic.
     """
     prompt = skills_tools_relevance_prompt(skills, job_description)
-
     response = gen_model(prompt)
     
     # Validate and cap points at 15
@@ -117,28 +91,30 @@ def create_analysis_chain(analysis_function):
     """Create a chain that runs a specific analysis function"""
     return RunnableLambda(lambda inputs: analysis_function(**inputs))
 
-def detail_resume_analysis(resume_text, job_description, use_cache=True, version="v3.0"):
+async def detail_resume_analysis(resume_text, job_description, use_cache=True, version="v3.0"):
     """
-    Updated resume analysis using V3 scoring system with new 100-point structure.
+    Updated resume analysis using V3 scoring system with new 100-point structure and Redis caching.
     Job Fit Score: 100 points total
     Resume Quality Score: 100 points total (internal only, shown as tiered labels)
     """
     try:
-        # Cache handling
+        # Check Redis cache if enabled
         if use_cache:
             resume_str = json.dumps(resume_text, sort_keys=True)
             job_desc_normalized = job_description.strip().lower()
-            combined_input = f"{resume_str}||{job_desc_normalized}||{version}"
-            cache_key = hashlib.md5(combined_input.encode()).hexdigest()
+            cache_key = redis_cache.generate_key("analysis_v3", resume_str, job_desc_normalized, version)
             
-            logger.info(f"Generated cache key: {cache_key[:8]}... for job desc length: {len(job_description)}")
+            logger.info(f"Generated cache key: {cache_key[:16]}... for job desc length: {len(job_description)}")
             
-            if cache_key in _analysis_cache:
-                logger.info("Using cached analysis result")
-                return _analysis_cache[cache_key]
+            # Check Redis cache
+            cached_result = await redis_cache.get(cache_key)
+            if cached_result:
+                logger.info("Cache HIT - Using cached analysis result from Redis")
+                return cached_result
                 
+        # Cache miss - perform analysis
+        logger.info("Cache MISS - Starting V3 resume analysis...")
         start_time = time.time()
-        print("Starting V3 LangChain resume analysis...")
         
         # Get resume sections
         sections_resume = evaluate_resume_sections(resume_text)
@@ -149,51 +125,36 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True, version
         education = resume_text.get("Education", {})
         skills = resume_text.get("Skills and Interests", [])
         
-        # Create individual chains for V3 analysis components
+        # Run all LLM-based analyses concurrently using asyncio.gather
+        # This is much faster than sequential or LangChain's RunnableParallel
+        logger.info("Starting concurrent analysis with asyncio.gather...")
         
-        # JOB FIT COMPONENTS (100 points total)
-        keyword_match_chain = RunnableLambda(lambda x: keyword_match(resume_text=resume_text, job_description=job_description))
-        job_experience_chain = RunnableLambda(lambda x: job_experience(resume_text=work_experience, job_description=job_description))  
-        education_certifications_chain = RunnableLambda(lambda x: education_certifications(certifications=certifications, education=education, job_description=job_description))
-        skills_tools_chain = RunnableLambda(lambda x: skills_tools_relevance(skills=skills, job_description=job_description))
-        
-        # RESUME QUALITY COMPONENTS (100 points total)
-        resume_structure_chain = RunnableLambda(lambda x: resume_structure(sections=sections_resume))
-        action_words_chain = RunnableLambda(lambda x: action_words(resume_text=resume_text, job_description=job_description))
-        measurable_results_chain = RunnableLambda(lambda x: measurable_results(resume_text=resume_text, job_description=job_description))
-        bullet_point_effectiveness_chain = RunnableLambda(lambda x: bullet_point_effectiveness(resume_text=resume_text))
-        
-        # Create parallel runnable
-        parallel_analysis = RunnableParallel(
-            keyword_match=keyword_match_chain,
-            job_experience=job_experience_chain,
-            education_certifications=education_certifications_chain,
-            skills_tools=skills_tools_chain,
-            resume_structure=resume_structure_chain,
-            action_words=action_words_chain,
-            measurable_results=measurable_results_chain,
-            bullet_point_effectiveness=bullet_point_effectiveness_chain
+        (
+            keyword_match_json,
+            job_experience_json,
+            education_certifications_json,
+            action_words_json,
+            measurable_results_json,
+            bullet_point_effectiveness_json
+        ) = await asyncio.gather(
+            keyword_match_async(resume_text=resume_text, job_description=job_description),
+            job_experience_async(resume_text=work_experience, job_description=job_description),
+            education_certifications_async(certifications=certifications, education=education, job_description=job_description),
+            action_words_async(resume_text=resume_text, job_description=job_description),
+            measurable_results_async(resume_text=resume_text, job_description=job_description),
+            bullet_point_effectiveness_async(resume_text=resume_text)
         )
-        inputs = {}
-        # Run all analyses in parallel
-        results = parallel_analysis.invoke(inputs)
         
-        # Extract results
-        keyword_match_json = results["keyword_match"]
-        job_experience_json = results["job_experience"]
-        education_certifications_json = results["education_certifications"]
-        skills_tools_json = results["skills_tools"]
-        resume_structure_json = results["resume_structure"]
-        action_words_json = results["action_words"]
-        measurable_results_json = results["measurable_results"]
-        bullet_point_effectiveness_json = results["bullet_point_effectiveness"]
+        # Skills/tools and resume structure don't need async (they're fast)
+        skills_tools_json = skills_tools_relevance(skills=skills, job_description=job_description)
+        resume_structure_json = resume_structure(sections=sections_resume)
         
-        print(f"LangChain analysis completed in {time.time() - start_time:.2f} seconds")
+        logger.info(f"Analysis completed in {time.time() - start_time:.2f} seconds")
         
         # Ensure all responses are properly parsed JSON objects
         def validate_json_response(response, component_name, default_points=0):
             if not isinstance(response, dict):
-                print(f"Warning: {component_name} is not a dictionary")
+                logger.warning(f"{component_name} is not a dictionary")
                 if isinstance(response, str):
                     try:
                         response = json.loads(response)
@@ -263,7 +224,7 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True, version
             if not isinstance(st_analysis.get('doubleCountReductions'), list):
                 st_analysis['doubleCountReductions'] = []
         except Exception as e:
-            print(f"Normalization error for skills_tools_json: {e}")
+            logger.error(f"Normalization error for skills_tools_json: {e}")
         
         # Calculate Job Fit Score (100 points) and Resume Quality Score (100 points)
         job_fit_scores = calculate_job_fit_score(
@@ -323,28 +284,22 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True, version
             "keyword_match": keyword_match_json,
             "job_experience": job_experience_json,
             "skills_certifications": education_certifications_json,  # Keep old naming for compatibility
+            "skills_tools": skills_tools_json,  # V3 - Skills & Tools as separate field
             "resume_structure": resume_structure_json,
             "action_words": action_words_json,
             "measurable_results": measurable_results_json,
             "bullet_point_effectiveness": bullet_point_effectiveness_json
         }
         
-        # Cache the result if caching is enabled
-        if use_cache and cache_key:
-            # If cache is full, remove oldest entry
-            if len(_analysis_cache) >= MAX_CACHE_SIZE:
-                oldest_key = next(iter(_analysis_cache))
-                del _analysis_cache[oldest_key]
-            
-            # Add new result to cache
-            _analysis_cache[cache_key] = result
+        # Cache the result in Redis if caching is enabled
+        if use_cache:
+            await redis_cache.set(cache_key, result, ttl=settings.cache_ttl_seconds)
+            logger.info("Cached analysis result in Redis")
         
         return result
     
     except Exception as e:
-        print(f"Error in detail_resume_analysis: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error in detail_resume_analysis: {str(e)}", exc_info=True)
         
         # Return a minimal structure to prevent frontend errors
         return {
@@ -364,6 +319,7 @@ def detail_resume_analysis(resume_text, job_description, use_cache=True, version
             "keyword_match": {"score": {"pointsAwarded": 0, "matchPercentage": 0, "rating": "Error"}, "analysis": {"strongMatches": [], "partialMatches": [], "missingKeywords": []}},
             "job_experience": {"score": {"pointsAwarded": 0, "alignmentPercentage": 0, "rating": "Error"}, "analysis": {"strongMatches": [], "partialMatches": [], "misalignedRoles": []}},
             "skills_certifications": {"score": {"pointsAwarded": 0, "matchPercentage": 0, "rating": "Error"}, "analysis": {"educationMatch": [], "certificationMatches": [], "missingCredentials": []}},
+            "skills_tools": {"score": {"pointsAwarded": 0, "matchPercentage": 0, "rating": "Error"}, "analysis": {"hardSkillMatches": [], "softSkillMatches": [], "missingSkills": []}},
             "resume_structure": {"score": {"pointsAwarded": 0, "completedMustHave": 0, "totalMustHave": 6}, "analysis": {"sectionStatus": []}},
             "action_words": {"score": {"pointsAwarded": 0, "actionVerbPercentage": 0}, "analysis": {"strongActionVerbs": [], "weakActionVerbs": []}},
             "measurable_results": {"score": {"pointsAwarded": 0, "measurableResultsCount": 0}, "analysis": {"measurableResults": [], "opportunitiesForMetrics": []}},

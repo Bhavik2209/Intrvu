@@ -1,8 +1,17 @@
 """Centralized LLM service with multi-provider support (OpenAI, Gemini, Groq)."""
 import logging
 from typing import Optional, Dict, Any
-from langchain_core.caches import InMemoryCache
-from langchain_core.globals import set_llm_cache
+try:
+    from langchain_core.caches import InMemoryCache
+    from langchain_core.globals import set_llm_cache
+except ImportError:
+    try:
+        from langchain.cache import InMemoryCache
+        from langchain.globals import set_llm_cache
+    except ImportError:
+        # Fallback for even older versions or community packages if needed
+        from langchain_community.cache import InMemoryCache
+        from langchain.globals import set_llm_cache
 from app.core.config import settings
 from app.core.exceptions import OpenAIError
 from app.services.llm_providers import BaseLLMProvider, OpenAIProvider, GeminiProvider, GroqProvider

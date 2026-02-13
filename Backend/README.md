@@ -225,48 +225,6 @@ See [`.env.example`](file:///d:/Intrvu/Intrvu/backend/.env.example) for complete
 
 This backend supports multiple LLM providers. See [`MULTI_PROVIDER_GUIDE.md`](file:///d:/Intrvu/Intrvu/backend/MULTI_PROVIDER_GUIDE.md) for detailed instructions.
 
-## 🌐 Deployment
-
-### Deploy to Render
-
-This backend is optimized for [Render](https://render.com) deployment with built-in Redis support.
-
-1. **Push to GitHub:**
-
-```bash
-git add .
-git commit -m "Ready for Render deployment"
-git push origin main
-```
-
-2. **Deploy via Blueprint:**
-   - Go to [render.com](https://render.com) and sign up
-   - Click **New +** → **Blueprint**
-   - Select your repository
-   - Render will auto-detect `render.yaml` and create:
-     - Web service (FastAPI app)
-     - Redis instance (automatically linked)
-
-3. **Set Environment Variables in Render Dashboard:**
-   - `GROQ_API_KEY` - Your Groq API key (required)
-   - `ALLOWED_ORIGINS` - Your frontend URL for CORS
-
-4. **Access Your API:**
-   - Render provides a URL like: `https://intrvu-backend.onrender.com`
-   - Test: `https://intrvu-backend.onrender.com/health`
-
-**Note**: Free tier spins down after 15 minutes of inactivity. First request after spin-down may take 30-60 seconds.
-
-```bash
-docker-compose up -d
-```
-
-### Deploy to Vercel
-
-1. **Connect Repository**: Link your GitHub repo to Vercel.
-2. **Environment Variables**: Add your API keys and Upstash credentials (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`).
-3. **Deploy**: Vercel will use `vercel.json` and `api/main.py`.
-
 ## 📁 Project Structure
 
 ```

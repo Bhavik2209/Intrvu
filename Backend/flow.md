@@ -44,10 +44,7 @@ Now we have your organized resume sections and the job description. We need to s
 ### 1. The "Double Cache" Efficiency
 Because we separate **Parsing** (Layer 1) from **Analysis** (Layer 2), if you use the same resume for **10 different jobs**, we only ever "parse" it once. We only use AI power for the new comparisons.
 
-### 2. Vercel + Upstash REST
-Since we are deployed on **Vercel** (which uses "Serverless" functions that turn on and off), we use **Upstash's REST API**. This allows our app to talk to its memory instantly without the "heavy lifting" of maintaining traditional database connections.
-
-### 3. Privacy & Security
+### 2. Privacy & Security
 We don't store your actual PDF files. We only store the "fingerprints" and the analyzed results in our secure memory layer, which are automatically deleted (expire) after a set time.
 
 ---

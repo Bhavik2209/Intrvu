@@ -13,7 +13,7 @@ A production-ready FastAPI backend that analyzes resumes against job description
 - **V4 Scoring System** - Advanced scoring across 8 key dimensions
 - **PDF Processing** - Secure extraction and validation of resume content
 - **Job Description Filtering** - Smart extraction of core job postings from messy text
-- **Redis Caching** - Optimized performance with distributed caching
+- **Upstash Redis Caching** - Optimized for Vercel/Serverless with REST API support
 - **Rate Limiting** - Built-in protection against abuse (10/min, 50/hour)
 - **Circuit Breaker** - Resilient error handling for external API failures
 - **Health Monitoring** - Health check endpoints for deployment monitoring
@@ -34,7 +34,7 @@ A production-ready FastAPI backend that analyzes resumes against job description
 ### Prerequisites
 
 - Python 3.11+
-- Redis (optional for local dev, required for production)
+- Redis (Cloud-based Upstash recommended for Vercel/Production)
 - Groq/OpenAI/Gemini API key
 
 ### 1. Clone and Setup
@@ -62,19 +62,20 @@ pip install -r requirements.txt
 # Copy example environment file
 copy .env.example .env
 
-# Edit .env and add your API key
+# Edit .env and add your API keys
 GROQ_API_KEY=your_actual_groq_api_key_here
+UPSTASH_REDIS_REST_URL=your_upstash_url
+UPSTASH_REDIS_REST_TOKEN=your_upstash_token
 ```
 
 ### 4. Run Redis (Optional for Local Dev)
 
 ```bash
-# Using Docker
+# Using Docker (Standard TCP Redis)
 docker run -d -p 6379:6379 redis:alpine
 
-# Or install Redis locally
-# Windows: https://redis.io/docs/getting-started/installation/install-redis-on-windows/
-# Mac: brew install redis && redis-server
+# Using Upstash (Recommended for Cloud/Vercel)
+# Add UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to .env
 ```
 
 ### 5. Start the Server
@@ -209,7 +210,9 @@ Simple liveness check.
 |----------|---------|-------------|
 | `PORT` | `8000` | Server port |
 | `ALLOWED_ORIGINS` | `*` | CORS allowed origins (comma-separated) |
-| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection string |
+| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection string (Standard TCP) |
+| `UPSTASH_REDIS_REST_URL` | - | Upstash REST URL (for Serverless) |
+| `UPSTASH_REDIS_REST_TOKEN` | - | Upstash REST Token (for Serverless) |
 | `REQUEST_TIMEOUT` | `120` | Request timeout in seconds |
 | `REQUIRE_AUTH` | `false` | Enable API key authentication |
 | `VALID_API_KEYS` | - | Valid API keys (comma-separated) |
@@ -254,24 +257,15 @@ git push origin main
 
 **Note**: Free tier spins down after 15 minutes of inactivity. First request after spin-down may take 30-60 seconds.
 
-### Deploy with Docker
-
-```bash
-# Build
-docker build -t intrvu-backend .
-
-# Run
-docker run -p 8000:8000 \
-  -e GROQ_API_KEY=your_key \
-  -e REDIS_URL=redis://host.docker.internal:6379 \
-  intrvu-backend
-```
-
-Or use `docker-compose`:
-
 ```bash
 docker-compose up -d
 ```
+
+### Deploy to Vercel
+
+1. **Connect Repository**: Link your GitHub repo to Vercel.
+2. **Environment Variables**: Add your API keys and Upstash credentials (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`).
+3. **Deploy**: Vercel will use `vercel.json` and `api/main.py`.
 
 ## 📁 Project Structure
 

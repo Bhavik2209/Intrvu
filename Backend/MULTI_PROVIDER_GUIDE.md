@@ -160,6 +160,6 @@ pip install langchain-groq
 ## Notes
 
 - All providers support both sync and async operations
-- Caching works the same across all providers
+- Caching works the same across all providers (Upstash Redis recommended for Vercel/Production)
 - Circuit breaker and retry logic apply to all providers
 - Response format is identical regardless of provider

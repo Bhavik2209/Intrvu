@@ -218,6 +218,7 @@ const bulletAnalysis = quality.bulletEffectiveness.analysis;
 - [ ] Update score breakdown components (new max values)
 - [ ] Update color schemes for new labels/tiers
 - [ ] Remove any V3-specific code
+- [ ] Update `.env` with Upstash REST URL and Token for faster cloud performance
 - [ ] Test with real API responses
 - [ ] Update TypeScript types (if applicable)
 

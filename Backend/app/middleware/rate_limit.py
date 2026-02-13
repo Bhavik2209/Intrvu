@@ -5,10 +5,11 @@ from slowapi.errors import RateLimitExceeded
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+from app.core.config import settings
 
 limiter = Limiter(
     key_func=get_remote_address,
-    storage_uri="redis://localhost:6379/1",  # Separate Redis DB for rate limiting
+    storage_uri=settings.redis_url,  # Use configured Redis URL
     strategy="fixed-window"
 )
 

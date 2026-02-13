@@ -17,7 +17,8 @@
         "https://www.linkedin.com/*",
         "https://*.linkedin.com/*",
         "http://127.0.0.1:8000/*",
-        "http://localhost:8000/*"
+        "http://localhost:8000/*",
+        "https://intrvu.onrender.com/*"
     ],
     "content_scripts": [
         {

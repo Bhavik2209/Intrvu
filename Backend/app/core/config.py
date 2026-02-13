@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
     redis_max_connections: int = Field(default=50, env="REDIS_MAX_CONNECTIONS")
     
+    # Upstash REST Settings (Preferred for serverless)
+    upstash_redis_rest_url: str = Field(default="", env="UPSTASH_REDIS_REST_URL")
+    upstash_redis_rest_token: str = Field(default="", env="UPSTASH_REDIS_REST_TOKEN")
+    
     # Request Timeout Settings
     request_timeout: int = Field(default=120, env="REQUEST_TIMEOUT")  # 120 seconds for LLM processing
     

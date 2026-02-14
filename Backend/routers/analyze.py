@@ -31,8 +31,8 @@ async def root():
     return {"message": "Welcome to Resume Analysis API"}
 
 @router.post("/api/analyze", response_model=AnalyzeResponse)
-@limiter.limit("10/minute")  # 10 requests per minute per IP
-@limiter.limit("50/hour")    # 50 requests per hour per IP
+@limiter.limit(f"{settings.rate_limit_per_minute}/minute")
+@limiter.limit(f"{settings.rate_limit_per_hour}/hour")
 async def job_analysis(
     request: Request,  # Required for rate limiting
     resume: UploadFile = File(...),

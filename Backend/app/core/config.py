@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     max_file_size_mb: int = Field(default=10, env="MAX_FILE_SIZE_MB")
     max_text_length: int = Field(default=50000, env="MAX_TEXT_LENGTH")
     
+    # Rate Limiting Settings
+    rate_limit_per_minute: int = Field(default=10, env="RATE_LIMIT_PER_MINUTE")
+    rate_limit_per_hour: int = Field(default=100, env="RATE_LIMIT_PER_HOUR")
+    
     
     def get_allowed_origins_list(self) -> List[str]:
         """Get allowed origins as a list."""

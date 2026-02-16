@@ -68,25 +68,25 @@ const OverviewSection: React.FC<OverviewSectionProps> = ({ analysisData }) => {
     <div>
       <StatusBadges analysisData={analysisData} />
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Role and Responsibilities</h2>
+      <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-8">
+        <h2 className="text-xl font-extrabold text-gray-800 mb-8 tracking-tight">Role and Responsibilities</h2>
 
         <div className="space-y-3 mb-8">
           {displayResponsibilities.map((responsibility: string, index: number) => (
-            <div key={index} className="flex items-start gap-3 cursor-pointer hover:bg-gray-50 active:bg-gray-100 p-2 rounded-lg transition-all duration-200 transform hover:scale-102 active:scale-98">
-              <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <span className="text-gray-700">{responsibility}</span>
+            <div key={index} className="flex items-start gap-3 p-2 rounded-lg transition-all duration-200">
+              <div className="w-1.5 h-1.5 bg-blue-400 rounded-full flex-shrink-0 mt-2" />
+              <span className="text-gray-600 text-sm font-medium leading-relaxed">{responsibility}</span>
             </div>
           ))}
         </div>
 
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Qualifications and Experience</h2>
+        <h2 className="text-xl font-extrabold text-gray-800 mb-8 mt-12 tracking-tight">Qualifications and Experience</h2>
 
         <div className="space-y-3">
           {displayQualifications.map((qualification: string, index: number) => (
-            <div key={index} className="flex items-start gap-3 cursor-pointer hover:bg-gray-50 active:bg-gray-100 p-2 rounded-lg transition-all duration-200 transform hover:scale-102 active:scale-98">
-              <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <span className="text-gray-700">{qualification}</span>
+            <div key={index} className="flex items-start gap-3 p-2 rounded-lg transition-all duration-200">
+              <div className="w-1.5 h-1.5 bg-purple-400 rounded-full flex-shrink-0 mt-2" />
+              <span className="text-gray-600 text-sm font-medium leading-relaxed">{qualification}</span>
             </div>
           ))}
         </div>

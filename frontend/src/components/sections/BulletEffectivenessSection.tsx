@@ -2,6 +2,8 @@ import React from 'react';
 import StatusBadges from '../StatusBadges';
 import { AnalysisData } from '../../types/AnalysisData';
 
+
+
 interface BulletEffectivenessSectionProps {
     analysisData: AnalysisData | null;
 }
@@ -27,53 +29,58 @@ const BulletEffectivenessSection: React.FC<BulletEffectivenessSectionProps> = ({
     }
 
     const bulletData = analysisData.detailed_analysis.bullet_point_effectiveness;
+    if (!bulletData) return null; // Additional safety
 
     return (
         <div>
             <StatusBadges analysisData={analysisData} />
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-6">Bullet Point Effectiveness Analysis</h2>
+            <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-8">
+                <h2 className="text-xl font-extrabold text-gray-800 mb-10 tracking-tight">Bullet Point Analysis</h2>
 
-                <div className="space-y-6">
-                    {/* Score Display */}
-                    <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-700">Effective Bullet Percentage:</h3>
-                        <span className="text-2xl font-bold text-blue-600">
-                            {bulletData.score.effectiveBulletPercentage}% ({bulletData.score.rating} {bulletData.score.ratingSymbol})
+                {/* Score Display Card */}
+                <div className="flex items-center justify-between mb-12 bg-gray-50/50 rounded-2xl p-6 border border-gray-50">
+                    <div className="flex items-center gap-3">
+                        <span className={`text-3xl font-bold tabular-nums tracking-tighter ${bulletData.score.effectiveBulletPercentage >= 80 ? 'text-emerald-500' :
+                            bulletData.score.effectiveBulletPercentage >= 60 ? 'text-blue-500' : 'text-amber-500'
+                            }`}>
+                            {bulletData.score.effectiveBulletPercentage}%
+                        </span>
+                        <span className={`px-4 py-1.5 rounded-xl text-[10px] font-bold border tracking-widest shadow-sm uppercase ${bulletData.score.effectiveBulletPercentage >= 80 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                            bulletData.score.effectiveBulletPercentage >= 60 ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-amber-50 text-amber-700 border-amber-100'
+                            }`}>
+                            {bulletData.score.rating}
                         </span>
                     </div>
+                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Effectiveness Score</span>
+                </div>
 
-                    <div className="flex items-center justify-between border-t pt-4">
-                        <h3 className="font-semibold text-gray-700">Score:</h3>
-                        <span className="text-lg text-gray-600">
-                            {bulletData.score.pointsAwarded} / {bulletData.score.maxPoints} points
-                        </span>
-                    </div>
-
+                <div className="space-y-10">
                     {/* Effective Bullets */}
                     {bulletData.analysis.effectiveBullets.length > 0 && (
                         <div>
-                            <h3 className="font-semibold text-gray-700 mb-3">Effective Bullets ✅</h3>
-                            <div className="space-y-3">
+                            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Effective Bullets</h3>
+                            <div className="space-y-4">
                                 {bulletData.analysis.effectiveBullets.map((bullet, index) => (
-                                    <div
-                                        key={index}
-                                        className="bg-green-50 border border-green-200 rounded-lg p-4 cursor-pointer hover:bg-green-100 active:bg-green-200 transition-all duration-200 transform hover:scale-102 active:scale-98 shadow-sm hover:shadow-md"
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <span className="text-green-600 text-lg flex-shrink-0">{bullet.symbol}</span>
+                                    <div key={index} className="bg-green-50 border border-green-100 rounded-2xl p-5 hover:bg-green-100/50 transition-all duration-300 shadow-sm">
+                                        <div className="flex items-start gap-4">
                                             <div className="flex-1">
-                                                <p className="text-gray-800 font-medium mb-2">{bullet.bulletPoint}</p>
-                                                <div className="flex items-center gap-4 text-sm text-gray-600">
-                                                    <span>Words: {bullet.wordCount}</span>
-                                                    <span>•</span>
-                                                    <span className="text-green-700 font-medium">+{bullet.points} pts</span>
+                                                <p className="text-gray-900 font-medium mb-3 tracking-tight leading-relaxed">{bullet.bulletPoint}</p>
+                                                <div className="flex items-center gap-4">
+                                                    <span className="px-2 py-1 bg-white border border-green-200 rounded-lg text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                                                        {bullet.wordCount} Words
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-green-700 uppercase tracking-wider">
+                                                        +{bullet.points} Points
+                                                    </span>
                                                 </div>
                                                 {bullet.strengths && (
-                                                    <p className="text-green-700 text-sm mt-2">
-                                                        <strong>Strengths:</strong> {bullet.strengths}
-                                                    </p>
+                                                    <div className="mt-4 pt-4 border-t border-green-100/50">
+                                                        <p className="text-green-800 text-xs font-medium leading-relaxed">
+                                                            <span className="font-bold uppercase tracking-widest text-[9px] block mb-1 opacity-60">Strengths</span>
+                                                            {bullet.strengths}
+                                                        </p>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -86,32 +93,33 @@ const BulletEffectivenessSection: React.FC<BulletEffectivenessSectionProps> = ({
                     {/* Ineffective Bullets */}
                     {bulletData.analysis.ineffectiveBullets.length > 0 && (
                         <div>
-                            <h3 className="font-semibold text-gray-700 mb-3">Ineffective Bullets ❌</h3>
-                            <div className="space-y-3">
+                            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 text-rose-400">Action Required</h3>
+                            <div className="space-y-4">
                                 {bulletData.analysis.ineffectiveBullets.map((bullet, index) => (
-                                    <div
-                                        key={index}
-                                        className="bg-red-50 border border-red-200 rounded-lg p-4 cursor-pointer hover:bg-red-100 active:bg-red-200 transition-all duration-200 transform hover:scale-102 active:scale-98 shadow-sm hover:shadow-md"
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <span className="text-red-600 text-lg flex-shrink-0">{bullet.symbol}</span>
+                                    <div key={index} className="bg-rose-50 border border-rose-100 rounded-2xl p-6 hover:bg-rose-100/50 transition-all duration-300 shadow-sm">
+                                        <div className="flex items-start gap-4">
                                             <div className="flex-1">
-                                                <p className="text-gray-800 font-medium mb-2">{bullet.bulletPoint}</p>
-                                                <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                                                    <span>Words: {bullet.wordCount}</span>
-                                                    <span>•</span>
-                                                    <span className="text-red-700 font-medium">{bullet.points} pts</span>
+                                                <p className="text-gray-900 font-medium mb-3 tracking-tight leading-relaxed">{bullet.bulletPoint}</p>
+                                                <div className="flex items-center gap-4 mb-4">
+                                                    <span className="px-2 py-1 bg-white border border-rose-200 rounded-lg text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                                                        {bullet.wordCount} Words
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">
+                                                        {bullet.points} Points
+                                                    </span>
                                                 </div>
+
                                                 {bullet.issues && (
-                                                    <p className="text-red-700 text-sm mb-2">
-                                                        <strong>Issues:</strong> {bullet.issues}
-                                                    </p>
+                                                    <div className="bg-white/50 rounded-xl p-4 mb-4 border border-rose-100">
+                                                        <span className="font-bold uppercase tracking-widest text-[9px] block mb-1 text-rose-900 opacity-60">Identified Issues</span>
+                                                        <p className="text-rose-800 text-xs font-medium leading-relaxed">{bullet.issues}</p>
+                                                    </div>
                                                 )}
+
                                                 {bullet.suggestedRevision && (
-                                                    <div className="bg-white border border-blue-200 rounded p-3 mt-2">
-                                                        <p className="text-blue-800 text-sm">
-                                                            <strong>Suggested Revision:</strong> {bullet.suggestedRevision}
-                                                        </p>
+                                                    <div className="bg-blue-600/5 rounded-xl p-4 border border-blue-600/20">
+                                                        <span className="font-bold uppercase tracking-widest text-[9px] block mb-1 text-blue-600">Suggested Revision</span>
+                                                        <p className="text-blue-900 text-sm font-semibold leading-relaxed">{bullet.suggestedRevision}</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -124,10 +132,10 @@ const BulletEffectivenessSection: React.FC<BulletEffectivenessSectionProps> = ({
 
                     {/* Suggestions */}
                     {bulletData.analysis.suggestedImprovements && (
-                        <div>
-                            <h3 className="font-semibold text-gray-700 mb-3">Suggestions</h3>
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <p className="text-blue-700 text-sm">{bulletData.analysis.suggestedImprovements}</p>
+                        <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 relative overflow-hidden group">
+                            <div className="relative border-l-4 border-blue-600 pl-6">
+                                <h4 className="text-[10px] font-bold text-blue-600 mb-3 tracking-widest uppercase">Expert Strategy</h4>
+                                <p className="text-gray-600 text-sm font-medium leading-relaxed">{bulletData.analysis.suggestedImprovements}</p>
                             </div>
                         </div>
                     )}

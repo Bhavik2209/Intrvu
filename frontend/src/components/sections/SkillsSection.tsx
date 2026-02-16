@@ -74,42 +74,39 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ analysisData }) => {
     <div>
       <StatusBadges analysisData={analysisData} />
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Skills Match</h2>
+      <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-8">
+        <h2 className="text-xl font-extrabold text-gray-800 mb-10 tracking-tight">Skills Match</h2>
 
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-700">Match percentage</h3>
-            <span className="text-lg text-gray-600">
-              {safeMatchPct}% ({safeRating})
+        {/* Skills Match Score */}
+        <div className="flex items-center justify-between mb-12 bg-gray-50/50 rounded-2xl p-6 border border-gray-50">
+          <div className="flex items-center gap-3">
+            <span className={`text-3xl font-bold tabular-nums tracking-tighter ${safeMatchPct >= 80 ? 'text-emerald-500' :
+              safeMatchPct >= 60 ? 'text-blue-500' : 'text-amber-500'
+              }`}>
+              {safeMatchPct}%
+            </span>
+            <span className={`px-4 py-1.5 rounded-xl text-[10px] font-bold border tracking-widest shadow-sm uppercase ${safeMatchPct >= 80 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+              safeMatchPct >= 60 ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-amber-50 text-amber-700 border-amber-100'
+              }`}>
+              {safeRating}
             </span>
           </div>
+          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Skills Match</span>
+        </div>
 
+        <div className="space-y-8">
           {/* Strong Matches */}
           <div>
-            <h3 className="font-semibold text-gray-700 mb-3">Strong Matches</h3>
-            <h4 className="font-medium text-gray-600 mb-3">Matched</h4>
-            <div className="space-y-3">
-              {/* Hard Skills */}
-              {hardSkillMatches.map((skill, index) => (
-                <div key={`hard-${index}`} className="bg-green-50 border border-green-200 rounded-lg p-4 cursor-pointer hover:bg-green-100 active:bg-green-200 transition-all duration-200 transform hover:scale-102 active:scale-98 shadow-sm hover:shadow-md">
-                  <div className="flex items-center gap-2">
-                    <span className="text-green-600 text-lg">✅</span>
-                    <div>
-                      <span className="font-medium text-gray-700">{String((skill as any)?.skill ?? '')}</span>
+            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Matched Skills</h3>
+            <div className="grid grid-cols-1 gap-3">
+              {/* Combine Hard and Soft Skills for a cleaner grid if they both exist */}
+              {[...hardSkillMatches, ...softSkillMatches].map((skill, index) => (
+                <div key={index} className="bg-green-50 border border-green-100 rounded-2xl p-4 cursor-pointer hover:bg-green-100/50 active:bg-green-200/50 transition-all duration-300 shadow-sm hover:shadow-md">
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                      <span className="text-green-600 text-lg">✅</span>
                     </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Soft Skills */}
-              {softSkillMatches.map((skill, index) => (
-                <div key={`soft-${index}`} className="bg-green-50 border border-green-200 rounded-lg p-4 cursor-pointer hover:bg-green-100 active:bg-green-200 transition-all duration-200 transform hover:scale-102 active:scale-98 shadow-sm hover:shadow-md">
-                  <div className="flex items-center gap-2">
-                    <span className="text-green-600 text-lg">✅</span>
-                    <div>
-                      <span className="font-medium text-gray-700">{String((skill as any)?.skill ?? '')}</span>
-                    </div>
+                    <span className="font-semibold text-gray-800 tracking-tight">{String((skill as any)?.skill ?? '')}</span>
                   </div>
                 </div>
               ))}
@@ -119,15 +116,15 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ analysisData }) => {
           {/* Missing Skills */}
           {missingSkills.length > 0 && (
             <div>
-              <h3 className="font-semibold text-gray-700 mb-3">Missing</h3>
-              <div className="space-y-3">
+              <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 text-rose-400">Missing Skills</h3>
+              <div className="grid grid-cols-1 gap-3">
                 {missingSkills.map((skill, index) => (
-                  <div key={`missing-${index}`} className="bg-orange-50 border border-orange-200 rounded-lg p-4 cursor-pointer hover:bg-orange-100 active:bg-orange-200 transition-all duration-200 transform hover:scale-102 active:scale-98 shadow-sm hover:shadow-md">
-                    <div className="flex items-center gap-2">
-                      <span className="text-orange-600 text-lg">{String((skill as any)?.symbol ?? '❌')}</span>
-                      <div>
-                        <span className="font-medium text-gray-700">{String((skill as any)?.skill ?? '')}</span>
+                  <div key={`missing-${index}`} className="bg-rose-50 border border-rose-100 rounded-2xl p-4 cursor-pointer hover:bg-rose-100/50 active:bg-rose-200/50 transition-all duration-300 shadow-sm hover:shadow-md">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                        <span className="text-rose-600 text-lg">{String((skill as any)?.symbol ?? '❌')}</span>
                       </div>
+                      <span className="font-semibold text-gray-800 tracking-tight">{String((skill as any)?.skill ?? '')}</span>
                     </div>
                   </div>
                 ))}
@@ -138,17 +135,19 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ analysisData }) => {
           {/* Double Count Reductions */}
           {doubleCountReductions && doubleCountReductions.length > 0 && (
             <div>
-              <h3 className="font-semibold text-gray-700 mb-3">Point Adjustments</h3>
+              <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Point Adjustments</h3>
               <div className="space-y-3">
                 {doubleCountReductions.map((reduction, index) => (
-                  <div key={`reduction-${index}`} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-blue-600 text-lg">ℹ️</span>
+                  <div key={`reduction-${index}`} className="bg-blue-50 border border-blue-100 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                        <span className="text-blue-600 text-lg">ℹ️</span>
+                      </div>
                       <div>
-                        <span className="font-medium text-gray-700">{String((reduction as any)?.skill ?? '')}</span>
-                        <div className="text-xs text-blue-700">
+                        <span className="font-semibold text-gray-900 block mb-1">{String((reduction as any)?.skill ?? '')}</span>
+                        <p className="text-xs text-blue-700/80 font-medium leading-relaxed">
                           {String((reduction as any)?.reason ?? '')}
-                        </div>
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -159,9 +158,16 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ analysisData }) => {
 
           {/* Suggestions */}
           {suggestionsText && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-800 mb-2">Suggestions</h4>
-              <p className="text-blue-700 text-sm whitespace-pre-line">{suggestionsText}</p>
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <span className="text-xl">💡</span>
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-bold text-blue-900 mb-1 tracking-tight uppercase opacity-60">Improvement Strategy</h4>
+                  <p className="text-blue-700/80 text-sm font-medium leading-relaxed whitespace-pre-line">{suggestionsText}</p>
+                </div>
+              </div>
             </div>
           )}
         </div>

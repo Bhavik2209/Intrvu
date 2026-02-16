@@ -77,6 +77,7 @@ const transformBackendResponse = (backendData: any): AnalysisData => {
     },
     resume_quality_score: {
       total_points: resumeQualityRawScore,
+      percentage: resumeQualityPercentage,
       label: resumeQualityPercentage >= 80 ? "✅ Excellent Quality" :
         resumeQualityPercentage >= 70 ? "👍 Good Quality" :
           resumeQualityPercentage >= 60 ? "⚠️ Needs Polish" : "❌ Poor Quality",
@@ -141,18 +142,18 @@ const transformBackendResponse = (backendData: any): AnalysisData => {
       },
       education_certifications: {
         score: {
-          passed: analysis.educationRequirement?.score?.passed ?? false,
-          pointsAwarded: analysis.educationRequirement?.score?.pointsAwarded ?? 0,
-          maxPoints: analysis.educationRequirement?.score?.maxPoints ?? 20,
-          rating: analysis.educationRequirement?.score?.rating ?? 'Not Met',
-          ratingSymbol: analysis.educationRequirement?.score?.ratingSymbol ?? '❌'
+          passed: analysis.jobFitScore?.components?.educationRequirement?.score?.passed ?? false,
+          pointsAwarded: analysis.jobFitScore?.components?.educationRequirement?.score?.pointsAwarded ?? 0,
+          maxPoints: analysis.jobFitScore?.components?.educationRequirement?.score?.maxPoints ?? 20,
+          rating: analysis.jobFitScore?.components?.educationRequirement?.score?.rating ?? 'Not Met',
+          ratingSymbol: analysis.jobFitScore?.components?.educationRequirement?.score?.ratingSymbol ?? '❌'
         },
         analysis: {
-          status: analysis.educationRequirement?.analysis?.status ?? 'Unknown',
-          degreeFound: analysis.educationRequirement?.analysis?.degreeFound ?? 'None',
-          degreeType: analysis.educationRequirement?.analysis?.degreeType ?? 'None',
-          fieldOfStudy: analysis.educationRequirement?.analysis?.fieldOfStudy ?? '',
-          suggestedImprovements: analysis.educationRequirement?.analysis?.suggestedImprovements ?? ''
+          status: analysis.jobFitScore?.components?.educationRequirement?.analysis?.status ?? 'Unknown',
+          degreeFound: analysis.jobFitScore?.components?.educationRequirement?.analysis?.degreeFound ?? 'None',
+          degreeType: analysis.jobFitScore?.components?.educationRequirement?.analysis?.degreeType ?? 'None',
+          fieldOfStudy: analysis.jobFitScore?.components?.educationRequirement?.analysis?.fieldOfStudy ?? '',
+          suggestedImprovements: analysis.jobFitScore?.components?.educationRequirement?.analysis?.suggestedImprovements ?? ''
         }
       },
       // Prefer backend V3 skills_tools if present; otherwise derive from skills_certifications for backward compatibility

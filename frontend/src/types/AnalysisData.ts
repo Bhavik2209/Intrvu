@@ -8,6 +8,7 @@ export interface AnalysisData {
     };
     resume_quality_score: {
         total_points: number;
+        percentage: number;
         label: string;
         symbol: string;
     };
@@ -100,6 +101,22 @@ export interface AnalysisData {
             analysis: {
                 measurableResults: any[];
                 opportunitiesForMetrics: any[];
+                suggestedImprovements: string;
+            };
+        };
+        education_certifications?: {
+            score: {
+                passed: boolean;
+                pointsAwarded: number;
+                maxPoints: number;
+                rating: string;
+                ratingSymbol: string;
+            };
+            analysis: {
+                status: string;
+                degreeFound: string;
+                degreeType: string;
+                fieldOfStudy: string;
                 suggestedImprovements: string;
             };
         };

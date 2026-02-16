@@ -35,29 +35,33 @@ const ActionVerbsSection: React.FC<ActionVerbsSectionProps> = ({ analysisData })
     <div>
       <StatusBadges analysisData={analysisData} />
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Action Verbs Analysis</h2>
+      <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-8">
+        <h2 className="text-xl font-extrabold text-gray-800 mb-10 tracking-tight">Action Verbs Analysis</h2>
 
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-700">Action Verbs Percentage:</h3>
-            <span className="text-2xl font-bold text-blue-600">
-              {actionVerbsData.score.actionVerbPercentage}%
-            </span>
+          <div className="flex items-center justify-between bg-gray-50/50 p-6 rounded-2xl border border-gray-50 mb-8">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl font-bold text-blue-600 tabular-nums tracking-tighter">
+                {actionVerbsData.score.actionVerbPercentage}%
+              </span>
+              <span className="px-4 py-1.5 rounded-xl text-[10px] font-bold border tracking-widest shadow-sm uppercase bg-blue-50 text-blue-700 border-blue-100">
+                USAGE RATE
+              </span>
+            </div>
+            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Action Verbs</span>
           </div>
 
           {/* Strong Action Verbs */}
           <div>
-            <h3 className="font-semibold text-gray-700 mb-3">Strong Action Verbs</h3>
+            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Strong Action Verbs</h3>
             {actionVerbsData.analysis.strongActionVerbs.length > 0 ? (
               <div className="space-y-3">
                 {actionVerbsData.analysis.strongActionVerbs.map((verb, index) => (
-                  <div key={index} className="bg-green-50 border border-green-200 rounded-lg p-4 cursor-pointer hover:bg-green-100 active:bg-green-200 transition-all duration-200 transform hover:scale-102 active:scale-98 shadow-sm hover:shadow-md">
+                  <div key={index} className="bg-green-50 border border-green-100 rounded-lg p-4 hover:bg-green-100 transition-all duration-200 shadow-sm">
                     <div className="flex items-center gap-2 text-green-700 mb-2">
-                      <span className="text-sm">✅</span>
-                      <span className="font-medium">{verb.actionVerb}</span>
+                      <span className="font-semibold text-[10px] uppercase tracking-wider opacity-70">Strong Verb: {verb.actionVerb}</span>
                     </div>
-                    <p className="text-gray-600 text-sm">{verb.bulletPoint}</p>
+                    <p className="text-gray-600 text-sm font-medium leading-relaxed">{verb.bulletPoint}</p>
                   </div>
                 ))}
               </div>

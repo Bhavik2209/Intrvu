@@ -42,14 +42,14 @@ const StructureSection: React.FC<StructureSectionProps> = ({ analysisData }) => 
     return 'bg-gray-100 text-gray-700';
   };
 
-  const getStatusText = (status: string, symbol: string) => {
+  const getStatusText = (status: string) => {
     const normalizedStatus = status.toLowerCase();
     if (normalizedStatus.includes('completed') || normalizedStatus.includes('included')) {
-      return `✅ Included`;
+      return `Included`;
     } else if (normalizedStatus.includes('missing') || normalizedStatus.includes('not included')) {
-      return `${symbol} Not included`;
+      return `Not included`;
     }
-    return `✅ ${status}`;
+    return status;
   };
 
   return (
@@ -57,7 +57,7 @@ const StructureSection: React.FC<StructureSectionProps> = ({ analysisData }) => 
       <StatusBadges analysisData={analysisData} />
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Resume Structure Analysis</h2>
+        <h2 className="text-xl font-extrabold text-gray-800 mb-6">Resume Structure Analysis</h2>
 
         <div className="space-y-6">
           {/* Rating Only */}
@@ -85,8 +85,8 @@ const StructureSection: React.FC<StructureSectionProps> = ({ analysisData }) => 
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(section.status)}`}>
-                      {getStatusText(section.status, section.symbol)}
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${getStatusColor(section.status)}`}>
+                      {getStatusText(section.status)}
                     </span>
                   </div>
                 </div>

@@ -32,28 +32,29 @@ const MeasurableResultsSection: React.FC<MeasurableResultsSectionProps> = ({ ana
     <div>
       <StatusBadges analysisData={analysisData} />
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Measurable Results Analysis</h2>
+      <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-8">
+        <h2 className="text-xl font-extrabold text-gray-800 mb-10 tracking-tight">Measurable Results Analysis</h2>
 
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-700">Measurable Results Count:</h3>
-            <span className="text-2xl font-bold text-blue-600">
-              {measurableData.score.measurableResultsCount}
-            </span>
+          <div className="flex items-center justify-between bg-gray-50/50 p-6 rounded-2xl border border-gray-50 mb-8">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl font-bold text-blue-600 tabular-nums tracking-tighter">
+                {measurableData.score.measurableResultsCount}
+              </span>
+            </div>
+            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Measurable Results</span>
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-700 mb-3">Measurable Results Found</h3>
+            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Measurable Results Found</h3>
             {measurableData.analysis.measurableResults.length > 0 ? (
               <div className="space-y-3">
                 {measurableData.analysis.measurableResults.map((result, index) => (
-                  <div key={index} className="bg-green-50 border border-green-200 rounded-lg p-4 cursor-pointer hover:bg-green-100 active:bg-green-200 transition-all duration-200 transform hover:scale-102 active:scale-98 shadow-sm hover:shadow-md">
+                  <div key={index} className="bg-green-50 border border-green-100 rounded-lg p-4 hover:bg-green-100 transition-all duration-200 shadow-sm">
                     <div className="flex items-center gap-2 text-green-700 mb-2">
-                      <span className="text-sm">✅</span>
-                      <span className="font-medium">{result.metric}</span>
+                      <span className="font-semibold text-xs tracking-tight uppercase opacity-70">Impact: {result.metric}</span>
                     </div>
-                    <p className="text-gray-600 text-sm">{result.bulletPoint}</p>
+                    <p className="text-gray-600 text-sm font-medium leading-relaxed">{result.bulletPoint}</p>
                   </div>
                 ))}
               </div>

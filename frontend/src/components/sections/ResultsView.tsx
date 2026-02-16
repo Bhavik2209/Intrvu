@@ -1,18 +1,23 @@
 import React from 'react';
-import { TrendingUp, Award, Lightbulb } from 'lucide-react';
+import { TrendingUp, CheckCircle2, Info, User, ChevronRight } from 'lucide-react';
 import { AnalysisData } from '../../types/AnalysisData';
 
 interface ResultsSectionProps {
   analysisData: AnalysisData | null;
   onUploadNewResume?: () => void;
+  onViewDetails?: () => void;
 }
 
-const ResultsView: React.FC<ResultsSectionProps> = ({ analysisData, onUploadNewResume }) => {
+const ResultsView: React.FC<ResultsSectionProps> = ({
+  analysisData,
+  onUploadNewResume,
+  onViewDetails
+}) => {
   if (!analysisData) {
     return (
       <div className="max-w-2xl mx-auto py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
           <p className="text-gray-500 font-medium tracking-tight">AI is analyzing your profile...</p>
         </div>
       </div>
@@ -20,99 +25,127 @@ const ResultsView: React.FC<ResultsSectionProps> = ({ analysisData, onUploadNewR
   }
 
   const jobFitScore = analysisData.job_fit_score || { percentage: 0, label: 'Unknown', score: 0 };
-  const resumeQuality = analysisData.resume_quality_score || { label: 'Unknown', total_points: 0 };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-emerald-500 bg-emerald-50 border-emerald-100';
-    if (score >= 60) return 'text-blue-500 bg-blue-50 border-blue-100';
-    return 'text-rose-500 bg-rose-50 border-rose-100';
-  };
+  // Suggested improvement tip from analysis data or fallback
+  const improvementTip = analysisData.detailed_analysis?.keyword_match?.analysis?.suggestedImprovements ||
+    "Your extensive experience in customer experience strategy and stakeholder facilitation aligns well with the Senior Director role...";
 
-  const scoreStyle = getScoreColor(jobFitScore.percentage);
+  const qualityTip = "Consider adding more industry-specific keywords to improve your match score.";
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">Analysis Complete</h1>
-        <p className="text-gray-500 font-medium text-sm">We've identified key areas to improve your match</p>
+    <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col min-h-full">
+      {/* Page Title Section */}
+      <div className="text-center mb-6">
+        <h1 className="text-[24px] font-black text-[#1e293b] mb-1 tracking-tight">
+          Resume Analysis Results
+        </h1>
+        <p className="text-[#64748b] text-sm font-medium">
+          Here's how your resume matches this job
+        </p>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4 flex-grow">
         {/* Job Fit Score Card */}
-        <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-8 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
-          <div className="flex flex-col items-center mb-8 bg-gray-50/50 rounded-2xl p-8 border border-gray-50">
-            <div className="flex flex-col items-center gap-4">
-              <span className={`text-5xl font-extrabold leading-none ${getScoreColor(jobFitScore.percentage).split(' ')[0]} tabular-nums tracking-tighter`}>
+        <div className="bg-white rounded-[24px] shadow-[0_2px_15px_rgba(0,0,0,0.02)] border border-[#f1f5f9] p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#eff6ff] flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-[#3b82f6]" />
+              </div>
+              <h2 className="text-lg font-bold text-[#1e293b]">Job Fit Score</h2>
+            </div>
+            <div className="flex items-center gap-1.5 bg-[#f0fdf4] text-[#166534] px-3 py-1 rounded-full border border-[#dcfce7]">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span className="text-xs font-bold">Good Match</span>
+            </div>
+          </div>
+
+          {/* Progress Bar Container */}
+          <div className="mb-6 px-1">
+            <div className="relative h-3 w-full bg-[#f1f5f9] rounded-full overflow-hidden mb-2">
+              <div
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#6366f1] to-[#4f46e5] rounded-full transition-all duration-1000 ease-out"
+                style={{ width: `${jobFitScore.percentage}%` }}
+              />
+            </div>
+            <div className="relative flex justify-between">
+              {[0, 25, 50, 75, 100].map((marker) => (
+                <div key={marker} className="flex flex-col items-center">
+                  <span className="text-[9px] font-bold text-[#94a3b8]">{marker}%</span>
+                </div>
+              ))}
+              {/* Actual Percentage Float */}
+              <div
+                className="absolute -top-1 font-black text-[#1e293b] text-xs"
+                style={{ left: `calc(${jobFitScore.percentage}% - 12px)` }}
+              >
                 {jobFitScore.percentage}%
-              </span>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-white border border-gray-100 flex items-center justify-center shadow-sm">
-                  <TrendingUp className="w-4 h-4 text-blue-600" />
-                </div>
-                <div className={`px-4 py-1.5 rounded-xl border ${scoreStyle} text-[10px] font-bold uppercase tracking-widest shadow-sm`}>
-                  {jobFitScore.label}
-                </div>
               </div>
             </div>
           </div>
 
-          <div className="relative overflow-hidden bg-blue-50/50 border border-blue-100 rounded-2xl p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                <Lightbulb className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="text-sm text-blue-900/80 leading-relaxed">
-                <strong className="text-blue-900 font-bold block mb-1">Improvement tip</strong>
-                <p>{analysisData.detailed_analysis?.keyword_match?.analysis?.suggestedImprovements || 'Focus on adding more relevant keywords to improve your match score.'}</p>
-              </div>
+          {/* Improvement Tip */}
+          <div className="bg-[#eff6ff] rounded-[18px] p-4 flex gap-3 items-start border border-[#dbeafe]">
+            <div className="mt-0.5">
+              <Info className="w-4 h-4 text-[#3b82f6]" />
+            </div>
+            <div className="text-xs leading-relaxed text-[#1e40af]">
+              <span className="font-bold">Improvement tip: </span>
+              {improvementTip}
             </div>
           </div>
         </div>
 
         {/* Resume Quality Card */}
-        <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-8 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center shadow-sm">
-                <Award className="w-6 h-6 text-purple-600" />
+        <div className="bg-white rounded-[24px] shadow-[0_2px_15px_rgba(0,0,0,0.02)] border border-[#f1f5f9] p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#f5f3ff] flex items-center justify-center">
+                <User className="w-5 h-5 text-[#8b5cf6]" />
               </div>
-              <div>
-                <h2 className="text-lg font-extrabold text-gray-800 leading-tight">Resume Quality</h2>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.15em] mt-1">Visual & Content Integrity</p>
-              </div>
+              <h2 className="text-lg font-bold text-[#1e293b]">Resume Quality</h2>
             </div>
-            <div className="flex items-center gap-2">
-              <span className={`bg-emerald-50 text-emerald-700 px-4 py-2 rounded-2xl text-[10px] font-bold border border-emerald-100 shadow-sm uppercase tracking-wider`}>
-                {resumeQuality.label}
-              </span>
-              <span className="bg-purple-100 text-purple-800 px-3 py-2 rounded-2xl text-[10px] font-bold border border-purple-200 shadow-sm">
-                {resumeQuality.percentage}%
-              </span>
+            <div className="bg-[#f0fdf4] text-[#166534] px-3 py-1 rounded-full border border-[#dcfce7] flex items-center gap-1.5">
+              <CheckCircle2 className="w-3 h-3" />
+              <span className="text-[10px] font-bold">Ready to Impress</span>
             </div>
           </div>
 
-          <p className="text-sm text-gray-600 leading-relaxed mb-6 font-medium">
-            Your resume content and structure have been evaluated for professional standards, formatting consistency, and readability.
-          </p>
-
-          <div className="bg-purple-50 border border-purple-100 rounded-2xl p-5">
-            <div className="flex items-center gap-4 text-purple-900">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
-                <span className="text-xl">✨</span>
-              </div>
-              <p className="text-xs font-bold leading-relaxed">Great progress! Your resume follows most industry best practices for quality and structure.</p>
+          {/* Pro Tip */}
+          <div className="bg-[#eff6ff] rounded-[18px] p-4 flex gap-3 items-start border border-[#dbeafe]">
+            <div className="mt-0.5">
+              <Info className="w-4 h-4 text-[#3b82f6]" />
+            </div>
+            <div className="text-xs leading-relaxed text-[#1e40af]">
+              <span className="font-bold">Pro tip: </span>
+              {qualityTip}
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="pt-6">
+        <div className="flex flex-col items-center gap-3 pt-2">
+          <button
+            onClick={onViewDetails}
+            className="w-full max-w-[280px] bg-[#4f46e5] text-white py-3 px-6 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#4338ca] transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-md shadow-indigo-100"
+          >
+            <span className="text-sm">View Detailed Analysis</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+
           <button
             onClick={onUploadNewResume}
-            className="w-full bg-blue-600 text-white py-4 px-8 rounded-3xl font-bold uppercase tracking-[0.2em] text-[10px] hover:bg-blue-700 active:bg-blue-800 transition-all duration-300 transform hover:-translate-y-1 shadow-xl shadow-blue-500/20 active:shadow-none"
+            className="text-[#4f46e5] font-bold text-xs hover:underline decoration-1 underline-offset-4"
           >
             Upload New Resume
           </button>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center mt-8 pt-4 border-t border-gray-100">
+        <div className="text-[9px] font-medium text-[#94a3b8] uppercase tracking-widest leading-tight">
+          <p>internship v3.0.2 • All rights reserved © 2025 Intrvu.ca</p>
         </div>
       </div>
     </div>

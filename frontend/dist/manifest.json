@@ -29,7 +29,8 @@
                 "https://*.linkedin.com/company/*/jobs/*"
             ],
             "js": [
-                "content-script.js"
+                "content-script.js",
+                "launcher-button.js"
             ],
             "run_at": "document_idle",
             "all_frames": true
@@ -51,7 +52,8 @@
                 "index.html",
                 "static/*",
                 "assets/*",
-                "side-panel.css"
+                "side-panel.css",
+                "launcher-button.css"
             ],
             "matches": [
                 "<all_urls>"

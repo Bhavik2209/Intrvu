@@ -129,6 +129,12 @@ function showPanel() {
     panelContainer.classList.add('intrvu-panel-visible');
     isPanelVisible = true;
     console.log('IntrvuFit: Panel shown');
+
+    // Notify launcher button of state change
+    window.postMessage({
+        type: 'INTRVU_PANEL_STATE_CHANGED',
+        visible: true
+    }, '*');
 }
 
 function hidePanel() {
@@ -137,6 +143,12 @@ function hidePanel() {
     panelContainer.classList.remove('intrvu-panel-visible');
     isPanelVisible = false;
     console.log('IntrvuFit: Panel hidden');
+
+    // Notify launcher button of state change
+    window.postMessage({
+        type: 'INTRVU_PANEL_STATE_CHANGED',
+        visible: false
+    }, '*');
 }
 
 // ========================================
@@ -205,6 +217,27 @@ function stopResize() {
 // ========================================
 // Message Listeners
 // ========================================
+
+// Listen for messages from launcher button (top window) or React UI (iframe)
+window.addEventListener('message', (event) => {
+    // Check if the message is from our own origin or the extension's origin
+    const isSameOrigin = event.origin === window.location.origin;
+    const isExtensionOrigin = event.origin.startsWith('chrome-extension://');
+
+    if (!isSameOrigin && !isExtensionOrigin) return;
+
+    if (event.data.type === 'INTRVU_TOGGLE_PANEL') {
+        console.log('IntrvuFit Side Panel: Received toggle request from launcher button');
+        togglePanel();
+    }
+
+    if (event.data.type === 'INTRVU_CLOSE_PANEL') {
+        console.log('IntrvuFit Side Panel: Received close request from UI');
+        hidePanel();
+    }
+});
+
+// Listen for messages from background script (via chrome.runtime)
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('IntrvuFit Side Panel: Received message:', request);
 

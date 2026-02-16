@@ -1,19 +1,24 @@
 import React from 'react';
 import Logo from './Logo';
-import { User } from 'lucide-react';
+import { X } from 'lucide-react';
 
 const Header: React.FC = () => {
+  const handleClose = () => {
+    window.parent.postMessage({ type: 'INTRVU_CLOSE_PANEL' }, '*');
+  };
+
   return (
-    <header className="bg-white px-4 py-3 flex items-center justify-between">
+    <header className="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100">
       <Logo />
-      
+
       <div className="flex items-center gap-3">
-        {/* <button className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded-full font-medium transition-all duration-200 text-sm">
-          Upgrade
+        <button
+          onClick={handleClose}
+          className="p-1.5 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all duration-200 group"
+          title="Close Extension"
+        >
+          <X className="w-5 h-5 group-active:scale-95 transition-transform" />
         </button>
-        <button className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-all duration-200">
-          <User className="w-4 h-4 text-gray-600" />
-        </button> */}
       </div>
     </header>
   );

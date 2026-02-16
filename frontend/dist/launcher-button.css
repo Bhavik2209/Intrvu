@@ -1,0 +1,158 @@
+/* IntrvuFit Launcher Button Styles */
+
+/* Main Button */
+#intrvu-launcher-button {
+    /* Critical positioning - use !important to override LinkedIn styles */
+    position: fixed !important;
+    bottom: 110px !important;
+    /* Moved higher to avoid message box */
+    right: 24px !important;
+    z-index: 2147483640 !important;
+
+    /* Layout */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 12px 20px !important;
+    margin: 0 !important;
+
+    /* Styling - White background with blue theme */
+    background: white !important;
+    color: #0073b1 !important;
+    border: 1px solid #0073b1 !important;
+    border-radius: 30px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+
+    /* Typography */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    text-align: center !important;
+
+    /* Interaction */
+    cursor: pointer !important;
+    user-select: none !important;
+
+    /* Animation */
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transform: translateY(0) scale(1) !important;
+
+    /* Ensure visibility */
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Hover State */
+#intrvu-launcher-button:hover {
+    transform: translateY(-2px) scale(1.05) !important;
+    background: #f8faff !important;
+    /* Subtle blue tint */
+    box-shadow: 0 6px 16px rgba(0, 115, 177, 0.2) !important;
+}
+
+/* Active/Pressed State */
+#intrvu-launcher-button:active {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 3px 12px rgba(0, 115, 177, 0.2) !important;
+}
+
+/* Panel Open State - Filled blue background when active */
+#intrvu-launcher-button.intrvu-launcher-active {
+    background: #0073b1 !important;
+    /* Filled blue background */
+    color: white !important;
+    border-color: #0073b1 !important;
+    box-shadow: 0 4px 16px rgba(0, 115, 177, 0.4) !important;
+}
+
+#intrvu-launcher-button.intrvu-launcher-active:hover {
+    background: #005582 !important;
+    /* Darker blue on hover */
+    border-color: #005582 !important;
+    box-shadow: 0 6px 24px rgba(0, 115, 177, 0.5) !important;
+}
+
+/* Icon Styling */
+#intrvu-launcher-button svg {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    fill: #0073b1 !important;
+    /* Blue icon */
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Icon color when panel is active - white */
+#intrvu-launcher-button.intrvu-launcher-active svg {
+    fill: white !important;
+}
+
+/* Text Styling */
+#intrvu-launcher-button span {
+    line-height: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    white-space: nowrap !important;
+    color: #0073b1 !important;
+    /* Blue text */
+}
+
+/* Text color when panel is active - white */
+#intrvu-launcher-button.intrvu-launcher-active span {
+    color: white !important;
+}
+
+/* Focus State for Accessibility */
+#intrvu-launcher-button:focus {
+    outline: 2px solid rgba(255, 255, 255, 0.8) !important;
+    outline-offset: 2px !important;
+}
+
+#intrvu-launcher-button:focus:not(:focus-visible) {
+    outline: none !important;
+}
+
+/* Responsive Design - Hide on very small screens */
+@media (max-width: 480px) {
+    #intrvu-launcher-button {
+        bottom: 90px !important;
+        right: 16px !important;
+        padding: 10px 16px !important;
+        font-size: 13px !important;
+    }
+
+    #intrvu-launcher-button svg {
+        width: 16px !important;
+        height: 16px !important;
+        min-width: 16px !important;
+        min-height: 16px !important;
+    }
+}
+
+/* Ensure button doesn't interfere with overlay panel */
+#intrvu-side-panel-container.intrvu-panel-visible~#intrvu-launcher-button {
+    /* Button remains visible even when panel is open */
+    z-index: 2147483640 !important;
+}
+
+/* Animation on appearance */
+@keyframes intrvu-launcher-fadein {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+#intrvu-launcher-button {
+    animation: intrvu-launcher-fadein 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}

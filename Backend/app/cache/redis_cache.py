@@ -1,122 +1,61 @@
-"""Redis-based distributed cache for multi-worker environments with Upstash support."""
-import redis.asyncio as redis
-from upstash_redis import Redis as UpstashRedis
-from typing import Optional, Any, Union
-import json
+"""In-memory cache used as a local fallback when Redis is disabled."""
+import asyncio
+from typing import Optional, Dict, Tuple
 import hashlib
 import logging
+import time
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class RedisCache:
-    """Async Redis cache wrapper with error handling and Upstash HTTP support."""
+    """Async cache wrapper backed by local process memory."""
     
     def __init__(self):
-        self.redis_client: Optional[Union[redis.Redis, UpstashRedis]] = None
-        self.is_upstash = False
+        self.redis_client = None
+        self._store: Dict[str, Tuple[float, dict]] = {}
     
     async def connect(self):
-        """Initialize Redis connection. Uses Upstash HTTP if credentials present."""
-        try:
-            if settings.upstash_redis_rest_url and settings.upstash_redis_rest_token:
-                # Use Upstash REST client for serverless compatibility
-                logger.info("Initializing Upstash REST Redis client")
-                self.redis_client = UpstashRedis(
-                    url=settings.upstash_redis_rest_url,
-                    token=settings.upstash_redis_rest_token
-                )
-                self.is_upstash = True
-                # Test connection (Upstash client is synchronous-style but uses HTTP)
-                # In upstash-redis, the client itself handles requests via HTTP
-                if self.redis_client.ping():
-                    logger.info("Upstash Redis connected successfully")
-                else:
-                    logger.warning("Upstash Redis ping failed")
-            else:
-                # Use standard redis-py for local development or traditional Redis
-                logger.info(f"Initializing standard Redis client: {settings.redis_url}")
-                self.redis_client = await redis.from_url(
-                    settings.redis_url,
-                    encoding="utf-8",
-                    decode_responses=True,
-                    max_connections=settings.redis_max_connections,
-                    socket_keepalive=True,
-                    socket_connect_timeout=5,
-                    retry_on_timeout=True
-                )
-                # Test connection
-                await self.redis_client.ping()
-                logger.info("Standard Redis cache connected successfully")
-                self.is_upstash = False
-        except Exception as e:
-            logger.error(f"Failed to connect to Redis: {e}")
-            self.redis_client = None
+        """Initialize local cache store."""
+        await asyncio.sleep(0)
+        self._store = {}
+        self.redis_client = self._store
+        logger.info("Using in-memory local cache (Redis disabled)")
     
     async def disconnect(self):
-        """Close Redis connection gracefully."""
-        if not self.is_upstash and self.redis_client:
-            try:
-                await self.redis_client.close()
-                logger.info("Redis cache disconnected")
-            except Exception as e:
-                logger.error(f"Error disconnecting from Redis: {e}")
+        """Clear local cache on shutdown."""
+        await asyncio.sleep(0)
+        self._store.clear()
+        self.redis_client = None
+        logger.info("Local cache cleared")
+
+    def _is_expired(self, expires_at: float) -> bool:
+        return time.time() >= expires_at
     
     async def get(self, key: str) -> Optional[dict]:
         """Get cached value by key."""
-        if not self.redis_client:
+        await asyncio.sleep(0)
+        if key not in self._store:
             return None
-        
-        try:
-            if self.is_upstash:
-                # Upstash client methods are synchronous as they use HTTP
-                data = self.redis_client.get(key)
-            else:
-                data = await self.redis_client.get(key)
-                
-            if data:
-                if isinstance(data, str):
-                    return json.loads(data)
-                return data # Upstash might return dict directly if configured
+
+        expires_at, data = self._store[key]
+        if self._is_expired(expires_at):
+            self._store.pop(key, None)
             return None
-        except Exception as e:
-            logger.error(f"Redis get error for key '{key}': {e}")
-            return None
+
+        return data
     
     async def set(self, key: str, value: dict, ttl: int = 3600):
         """Set cached value with TTL."""
-        if not self.redis_client:
-            return
-        
-        try:
-            if self.is_upstash:
-                self.redis_client.setex(
-                    key,
-                    ttl,
-                    json.dumps(value)
-                )
-            else:
-                await self.redis_client.setex(
-                    key,
-                    ttl,
-                    json.dumps(value)
-                )
-        except Exception as e:
-            logger.error(f"Redis set error for key '{key}': {e}")
+        await asyncio.sleep(0)
+        expires_at = time.time() + max(ttl, 1)
+        self._store[key] = (expires_at, value)
     
     async def delete(self, key: str):
         """Delete cached value by key."""
-        if not self.redis_client:
-            return
-        
-        try:
-            if self.is_upstash:
-                self.redis_client.delete(key)
-            else:
-                await self.redis_client.delete(key)
-        except Exception as e:
-            logger.error(f"Redis delete error for key '{key}': {e}")
+        await asyncio.sleep(0)
+        self._store.pop(key, None)
     
     def generate_key(self, prefix: str, *args) -> str:
         """Generate consistent cache key from arguments."""

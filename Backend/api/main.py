@@ -27,7 +27,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add CORS middleware with environment-based configuration
+# Add rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+# Add timeout middleware
+app.add_middleware(TimeoutMiddleware)
+
+# Add CORS middleware last in the middleware chain
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.get_allowed_origins_list(),
@@ -35,13 +42,6 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Authorization"],
 )
-
-# Add rate limiter
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
-
-# Add timeout middleware
-app.add_middleware(TimeoutMiddleware)
 
 # Import new structured router
 app.include_router(analyze_router)
@@ -71,24 +71,15 @@ async def ping():
 async def health_check():
     """
     Comprehensive health check endpoint.
-    Checks Redis connection and overall system health.
+    Checks cache mode and overall system health.
     """
     health = {
         "status": "healthy",
         "checks": {}
     }
-    
-    # Check Redis connection
-    try:
-        if redis_cache.redis_client:
-            await redis_cache.redis_client.ping()
-            health["checks"]["redis"] = "healthy"
-        else:
-            health["checks"]["redis"] = "not_connected"
-            health["status"] = "degraded"
-    except Exception as e:
-        health["checks"]["redis"] = f"unhealthy: {str(e)}"
-        health["status"] = "unhealthy"
+
+    # Local in-memory cache mode
+    health["checks"]["cache"] = "in_memory"
     
     # Add version info
     health["version"] = "1.0.0"

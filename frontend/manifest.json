@@ -1,6 +1,6 @@
 {
     "name": "IntrvuFit - Resume optimizer",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "manifest_version": 3,
     "action": {
         "default_title": "IntrvuFit - Resume Optimizer"

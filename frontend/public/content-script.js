@@ -15,14 +15,47 @@ const DEBOUNCE_DELAY = 500; // ms
 let lastProcessedURL = window.location.href;
 let urlCheckInterval = null;
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function expandJobDescription() {
+    const expandableButtons = Array.from(document.querySelectorAll('button, a[role="button"]'));
+
+    for (const button of expandableButtons) {
+        const text = (button.textContent || '').trim().toLowerCase();
+        if (!text) continue;
+
+        const isExpandCta =
+            text === 'show more' ||
+            text === 'see more' ||
+            text.includes('show more') ||
+            text.includes('see more');
+
+        if (isExpandCta) {
+            try {
+                button.click();
+                console.log('IntrvuFit: Clicked expand button:', text);
+                return true;
+            } catch (error) {
+                console.warn('IntrvuFit: Failed clicking expand button:', error);
+            }
+        }
+    }
+
+    return false;
+}
+
 // ========================================
 // URL Change Detection
 // ========================================
 function isJobPage(url) {
     const jobPatterns = [
         /linkedin\.com\/jobs\/view\//,
+        /linkedin\.com\/jobs\/search\//,
         /linkedin\.com\/jobs\/collections\//,
-        /linkedin\.com\/company\/.*\/jobs\//
+        /linkedin\.com\/company\/.*\/jobs\//,
+        /linkedin\.com\/jobs\//
     ];
 
     return jobPatterns.some(pattern => pattern.test(url));
@@ -36,6 +69,10 @@ function clearJobData() {
     lastExtractedCompany = null;
 
     window.__INTRVU_JOB_DATA__ = null;
+
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.remove(['currentJobData', 'lastExtracted']);
+    }
 
     // Notify popup/side panel of data clear
     window.postMessage({
@@ -66,7 +103,7 @@ function handleURLChange() {
     clearTimeout(extractionTimeout);
     extractionTimeout = setTimeout(() => {
         console.log('IntrvuFit: Re-extracting job data for new URL');
-        attemptExtraction();
+        attemptExtractionWithRetry(8, 350);
     }, DEBOUNCE_DELAY);
 }
 
@@ -74,6 +111,27 @@ function handleURLChange() {
 // Semantic Header Detection
 // ========================================
 function findJobDescriptionSection() {
+    // Strategy 0: First try highly reliable LinkedIn selectors used across layouts.
+    const directSelectors = [
+        '.jobs-description__content',
+        '.jobs-description-content__text',
+        '.jobs-box__html-content',
+        '.jobs-description',
+        '[data-test-id="job-details"]',
+        '[data-testid="job-details"]',
+        '[data-testid="job-details-module"]',
+        '[data-testid="expandable-text-box"]',
+        '.show-more-less-html__markup'
+    ];
+
+    for (const selector of directSelectors) {
+        const el = document.querySelector(selector);
+        if (el && hasSubstantialContent(el)) {
+            console.log('IntrvuFit: Found job description via selector:', selector);
+            return el;
+        }
+    }
+
     // Headers to look for (prioritized)
     const headerPatterns = [
         /about the job/i,
@@ -161,8 +219,11 @@ function hasSubstantialContent(element) {
     const text = element.innerText || element.textContent || '';
     const trimmed = text.trim();
 
-    // Must have at least 200 characters to be considered substantial
-    if (trimmed.length < 200) return false;
+    // Must have at least 120 characters to be considered substantial.
+    if (trimmed.length < 120) return false;
+
+    // Very long text is almost always the description even without keywords.
+    if (trimmed.length >= 500) return true;
 
     // Should contain job-related keywords
     const keywords = ['responsibilities', 'requirements', 'qualifications', 'experience', 'skills', 'what you'];
@@ -305,12 +366,19 @@ function attemptExtraction() {
     const jobTitle = extractJobTitle();
     const company = extractCompanyName();
 
+    const hasUsableDescription = description && description.length >= 120;
+
+    if (!hasUsableDescription) {
+        console.log('IntrvuFit: Skipping publish - job description is too short or missing');
+        return false;
+    }
+
     // Check if this is different from last extraction (deduplication)
     if (description === lastExtractedDescription &&
         jobTitle === lastExtractedJobTitle &&
         company === lastExtractedCompany) {
         console.log('IntrvuFit: Skipping - identical to previous extraction');
-        return;
+        return !!window.__INTRVU_JOB_DATA__;
     }
 
     // Update state
@@ -338,7 +406,48 @@ function attemptExtraction() {
         data: window.__INTRVU_JOB_DATA__
     }, '*');
 
+    // Persist in extension storage and notify background for side panel/react hook consumers.
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.storage && chrome.storage.local) {
+        try {
+            chrome.storage.local.set({
+                currentJobData: window.__INTRVU_JOB_DATA__,
+                lastExtracted: Date.now()
+            });
+
+            chrome.runtime.sendMessage({
+                type: 'JOB_DATA_EXTRACTED',
+                data: window.__INTRVU_JOB_DATA__
+            }, () => {
+                if (chrome.runtime.lastError) {
+                    console.log('IntrvuFit: Background message not received:', chrome.runtime.lastError.message);
+                }
+            });
+        } catch (error) {
+            console.warn('IntrvuFit: Failed to persist extracted data:', error);
+        }
+    }
+
     console.log('IntrvuFit: Job data stored in window.__INTRVU_JOB_DATA__');
+    return true;
+}
+
+async function attemptExtractionWithRetry(maxAttempts = 8, delayMs = 500) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        expandJobDescription();
+
+        const ok = attemptExtraction();
+        if (ok) {
+            console.log(`IntrvuFit: Extraction succeeded on attempt ${attempt}/${maxAttempts}`);
+            return true;
+        }
+
+        if (attempt < maxAttempts) {
+            await sleep(delayMs);
+        }
+    }
+
+    console.log('IntrvuFit: Extraction retry attempts exhausted');
+    return false;
 }
 
 // ========================================
@@ -351,6 +460,11 @@ function startObserver() {
 
     // Initial extraction
     attemptExtraction();
+
+    // First-load retry passes for LinkedIn lazy rendering.
+    setTimeout(() => { attemptExtractionWithRetry(3, 400); }, 900);
+    setTimeout(() => { attemptExtractionWithRetry(3, 400); }, 2200);
+    setTimeout(() => { attemptExtractionWithRetry(3, 400); }, 4000);
 
     // Create observer
     observerInstance = new MutationObserver((mutations) => {
@@ -388,8 +502,14 @@ function stopObserver() {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('IntrvuFit: Received message:', request);
 
-    if (request.action === 'getJobDetails') {
-        // Return stored data
+    if (request.action === 'PING_CONTENT_SCRIPT') {
+        sendResponse({ success: true, ready: true });
+    } else if (request.action === 'getJobDetails') {
+        if (!window.__INTRVU_JOB_DATA__ || !window.__INTRVU_JOB_DATA__.jobDescription) {
+            // Trigger extraction in background while responding immediately.
+            attemptExtractionWithRetry(6, 350);
+        }
+
         sendResponse({
             success: true,
             data: window.__INTRVU_JOB_DATA__ || {
@@ -400,12 +520,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             }
         });
     } else if (request.action === 'extractNow') {
-        // Force immediate extraction
-        attemptExtraction();
-        sendResponse({
-            success: true,
-            data: window.__INTRVU_JOB_DATA__
-        });
+        (async () => {
+            await attemptExtractionWithRetry(6, 350);
+            sendResponse({
+                success: true,
+                data: window.__INTRVU_JOB_DATA__
+            });
+        })();
     }
 
     return true; // Keep channel open for async response

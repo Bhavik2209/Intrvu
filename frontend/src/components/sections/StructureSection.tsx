@@ -1,104 +1,113 @@
 import React from 'react';
-import StatusBadges from '../StatusBadges';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { AnalysisData } from '../../types/AnalysisData';
+import DetailedAnalysisHeader from '../DetailedAnalysisHeader';
 
 interface StructureSectionProps {
   analysisData: AnalysisData | null;
 }
 
 const StructureSection: React.FC<StructureSectionProps> = ({ analysisData }) => {
-  const structureDataCheck = analysisData?.detailed_analysis?.resume_structure;
+  const structureData = analysisData?.detailed_analysis?.resume_structure;
 
-  if (!analysisData || !structureDataCheck) {
+  // Placeholder/Loading State
+  if (!analysisData || !structureData) {
     return (
-      <div>
-        <StatusBadges analysisData={null} />
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
-            <div className="space-y-3">
-              {[...Array(7)].map((_, i) => (
-                <div key={i} className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg">
-                  <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                  <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <div className="animate-pulse py-6">
+        <DetailedAnalysisHeader analysisData={null} />
+        <div className="h-6 bg-gray-100 rounded-lg w-48 mb-4 mt-6"></div>
+        <div className="h-48 bg-gray-50 rounded-3xl w-full"></div>
       </div>
     );
   }
 
-  const structureData = analysisData?.detailed_analysis?.resume_structure;
-
-  const getStatusColor = (status: string) => {
+  const getStatusConfig = (status: string) => {
     const normalizedStatus = status.toLowerCase();
-    if (normalizedStatus.includes('completed') || normalizedStatus.includes('included')) {
-      return 'bg-green-100 text-green-700';
-    } else if (normalizedStatus.includes('missing') || normalizedStatus.includes('not included')) {
-      return 'bg-orange-100 text-orange-700';
-    }
-    return 'bg-gray-100 text-gray-700';
-  };
+    const isIncluded = normalizedStatus.includes('completed') || normalizedStatus.includes('included');
 
-  const getStatusText = (status: string) => {
-    const normalizedStatus = status.toLowerCase();
-    if (normalizedStatus.includes('completed') || normalizedStatus.includes('included')) {
-      return `Included`;
-    } else if (normalizedStatus.includes('missing') || normalizedStatus.includes('not included')) {
-      return `Not included`;
+    if (isIncluded) {
+      return {
+        text: 'Included',
+        bg: 'bg-[#d1fae5]',
+        textColor: 'text-[#10b981]',
+        icon: <CheckCircle2 className="w-3.5 h-3.5 text-[#10b981]" />
+      };
+    } else {
+      return {
+        text: 'Not included',
+        bg: 'bg-[#fed7aa]',
+        textColor: 'text-[#f97316]',
+        icon: <AlertTriangle className="w-3.5 h-3.5 text-[#f97316]" />
+      };
     }
-    return status;
   };
 
   return (
-    <div>
-      <StatusBadges analysisData={analysisData} />
+    <div className="min-h-full flex flex-col max-w-4xl mx-auto py-3">
+      {/* Shared Header */}
+      <DetailedAnalysisHeader analysisData={analysisData} />
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-extrabold text-gray-800 mb-6">Resume Structure Analysis</h2>
+      {/* Main Content Area */}
+      <div className="mt-2">
+        <h2 className="text-xl font-black text-[#1e293b] mb-3 tracking-tight">Resume Structure Analysis</h2>
 
-        <div className="space-y-6">
-          {/* Rating Only */}
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-700">Rating:</h3>
-            <span className="text-lg text-gray-600">
-              {structureData.score.ratingSymbol} {structureData.score.rating}
-            </span>
-          </div>
-
-          {/* Section Status */}
+        <div className="space-y-4">
+          {/* Section Status Area */}
           <div>
-            <h3 className="font-semibold text-gray-700 mb-4">Section Status</h3>
+            <div className="bg-[#f1f5f9] rounded-2xl p-4 border border-[#e2e8f0]">
+              <h3 className="text-[15px] font-extrabold text-[#475569] mb-2">Section Status</h3>
 
-            <div className="space-y-3">
-              {structureData.analysis.sectionStatus.map((section, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 active:bg-gray-200 transition-all duration-200 transform hover:scale-102 active:scale-98 shadow-sm hover:shadow-md"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-700 font-medium">{section.section}</span>
-                    <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded">
-                      {section.type}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${getStatusColor(section.status)}`}>
-                      {getStatusText(section.status)}
-                    </span>
-                  </div>
-                </div>
-              ))}
+              <div className="space-y-2">
+                {structureData.analysis.sectionStatus.map((section, index) => {
+                  const statusConfig = getStatusConfig(section.status);
+                  return (
+                    <div
+                      key={`${section.section}-${section.type || 'base'}-${section.status}-${index}`}
+                      className="bg-white border border-[#e5e7eb] rounded-xl px-3 py-2.5 flex items-center justify-between"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-[13px] font-semibold text-[#475569]">
+                          {section.section}
+                        </span>
+                        {section.type && (
+                          <span className="text-[9px] text-[#94a3b8] uppercase tracking-wider font-bold mt-0.5">
+                            {section.type}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className={`flex items-center gap-1 px-2.5 py-1 rounded-lg ${statusConfig.bg}`}>
+                        {statusConfig.icon}
+                        <span className={`text-[11px] font-bold whitespace-nowrap ${statusConfig.textColor}`}>
+                          {statusConfig.text}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {structureData.analysis.sectionStatus.length === 0 && (
+                  <p className="text-[13px] text-[#64748b] italic p-3 bg-white rounded-xl text-center border border-dashed border-[#cbd5e1]">
+                    No section data available.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Suggestions */}
           {structureData.analysis.suggestedImprovements && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-800 mb-2">Suggestions</h4>
-              <p className="text-blue-700 text-sm">{structureData.analysis.suggestedImprovements}</p>
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5">
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-base">💡</span>
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-bold text-blue-900 mb-1 tracking-tight uppercase opacity-60">Structure Improvement Strategy</h4>
+                  <p className="text-blue-700/80 text-[12px] font-medium leading-[1.45] whitespace-pre-line">
+                    {structureData.analysis.suggestedImprovements}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>

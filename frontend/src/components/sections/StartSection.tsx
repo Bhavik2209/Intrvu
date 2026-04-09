@@ -145,15 +145,33 @@ const transformBackendResponse = (backendData: any): AnalysisData => {
           passed: analysis.jobFitScore?.components?.educationRequirement?.score?.passed ?? false,
           pointsAwarded: analysis.jobFitScore?.components?.educationRequirement?.score?.pointsAwarded ?? 0,
           maxPoints: analysis.jobFitScore?.components?.educationRequirement?.score?.maxPoints ?? 20,
-          rating: analysis.jobFitScore?.components?.educationRequirement?.score?.rating ?? 'Not Met',
-          ratingSymbol: analysis.jobFitScore?.components?.educationRequirement?.score?.ratingSymbol ?? '❌'
+          rating: analysis.jobFitScore?.components?.educationRequirement?.score?.rating
+            ?? analysis.education_certifications?.score?.rating
+            ?? 'Not Met',
+          ratingSymbol: analysis.jobFitScore?.components?.educationRequirement?.score?.ratingSymbol
+            ?? analysis.education_certifications?.score?.ratingSymbol
+            ?? '❌',
+          matchPercentage: analysis.education_certifications?.score?.matchPercentage
+            ?? analysis.education_certifications?.score?.educationCertificationMatchPercentage
+            ?? undefined
         },
         analysis: {
           status: analysis.jobFitScore?.components?.educationRequirement?.analysis?.status ?? 'Unknown',
           degreeFound: analysis.jobFitScore?.components?.educationRequirement?.analysis?.degreeFound ?? 'None',
           degreeType: analysis.jobFitScore?.components?.educationRequirement?.analysis?.degreeType ?? 'None',
           fieldOfStudy: analysis.jobFitScore?.components?.educationRequirement?.analysis?.fieldOfStudy ?? '',
-          suggestedImprovements: analysis.jobFitScore?.components?.educationRequirement?.analysis?.suggestedImprovements ?? ''
+          suggestedImprovements: analysis.jobFitScore?.components?.educationRequirement?.analysis?.suggestedImprovements
+            ?? analysis.education_certifications?.analysis?.suggestedImprovements
+            ?? '',
+          educationMatch: analysis.education_certifications?.analysis?.educationMatch
+            ?? analysis.jobFitScore?.components?.educationRequirement?.analysis?.educationMatch
+            ?? [],
+          certificationMatches: analysis.education_certifications?.analysis?.certificationMatches
+            ?? analysis.jobFitScore?.components?.educationRequirement?.analysis?.certificationMatches
+            ?? [],
+          missingCredentials: analysis.education_certifications?.analysis?.missingCredentials
+            ?? analysis.jobFitScore?.components?.educationRequirement?.analysis?.missingCredentials
+            ?? []
         }
       },
       // Prefer backend V3 skills_tools if present; otherwise derive from skills_certifications for backward compatibility

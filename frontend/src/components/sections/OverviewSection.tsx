@@ -1,8 +1,8 @@
 import React from 'react';
-import StatusBadges from '../StatusBadges';
 import { Check } from 'lucide-react';
 import { AnalysisData } from '../../types/AnalysisData';
 import { useJobExtraction } from '../../hooks/useJobExtraction';
+import DetailedAnalysisHeader from '../DetailedAnalysisHeader';
 
 interface OverviewSectionProps {
   analysisData: AnalysisData | null;
@@ -64,32 +64,50 @@ const OverviewSection: React.FC<OverviewSectionProps> = ({ analysisData }) => {
   const displayResponsibilities = responsibilities.length > 0 ? responsibilities : defaultResponsibilities;
   const displayQualifications = qualifications.length > 0 ? qualifications : defaultQualifications;
 
+  const ListItem = ({ text }: { text: string }) => (
+    <div className="flex items-start gap-4 py-2 group">
+      <div className="w-6 h-6 rounded-full bg-[#d1fae5] flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-200 shadow-sm border border-[#10b981]/10">
+        <Check className="w-3.5 h-3.5 text-[#10b981] stroke-[3]" />
+      </div>
+      <span className="text-[#1f2937] text-base font-normal leading-relaxed">
+        {text}
+      </span>
+    </div>
+  );
+
   return (
-    <div>
-      <StatusBadges analysisData={analysisData} />
+    <div className="min-h-full flex flex-col max-w-4xl mx-auto py-4">
+      {/* Shared Header */}
+      <DetailedAnalysisHeader analysisData={analysisData} />
 
-      <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-8">
-        <h2 className="text-xl font-extrabold text-gray-800 mb-8 tracking-tight">Role and Responsibilities</h2>
+      <div className="mt-12 space-y-16">
+        {/* Role and Responsibilities Section */}
+        <section>
+          <h2 className="text-xl font-black text-[#111827] mb-8 tracking-tight">Role and Responsibilities</h2>
+          <div className="flex flex-col gap-3">
+            {displayResponsibilities.length > 0 ? (
+              displayResponsibilities.map((responsibility, index) => (
+                <ListItem key={`resp-${index}`} text={responsibility} />
+              ))
+            ) : (
+              <p className="text-[#9ca3af] italic text-base pl-1">No responsibilities listed</p>
+            )}
+          </div>
+        </section>
 
-        <div className="space-y-3 mb-8">
-          {displayResponsibilities.map((responsibility: string, index: number) => (
-            <div key={index} className="flex items-start gap-3 p-2 rounded-lg transition-all duration-200">
-              <div className="w-1.5 h-1.5 bg-blue-400 rounded-full flex-shrink-0 mt-2" />
-              <span className="text-gray-600 text-sm font-medium leading-relaxed">{responsibility}</span>
-            </div>
-          ))}
-        </div>
-
-        <h2 className="text-xl font-extrabold text-gray-800 mb-8 mt-12 tracking-tight">Qualifications and Experience</h2>
-
-        <div className="space-y-3">
-          {displayQualifications.map((qualification: string, index: number) => (
-            <div key={index} className="flex items-start gap-3 p-2 rounded-lg transition-all duration-200">
-              <div className="w-1.5 h-1.5 bg-purple-400 rounded-full flex-shrink-0 mt-2" />
-              <span className="text-gray-600 text-sm font-medium leading-relaxed">{qualification}</span>
-            </div>
-          ))}
-        </div>
+        {/* Qualifications and Experience Section */}
+        <section>
+          <h2 className="text-xl font-black text-[#111827] mb-8 tracking-tight">Qualifications and Experience</h2>
+          <div className="flex flex-col gap-3">
+            {displayQualifications.length > 0 ? (
+              displayQualifications.map((qualification, index) => (
+                <ListItem key={`qual-${index}`} text={qualification} />
+              ))
+            ) : (
+              <p className="text-[#9ca3af] italic text-base pl-1">No qualifications listed</p>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );

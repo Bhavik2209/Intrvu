@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { JobData, JobExtractionStatus } from '../types/JobData';
+import { API_BASE_URL } from '../config';
 
 export const useJobExtraction = () => {
   const [jobStatus, setJobStatus] = useState<JobExtractionStatus>({
@@ -88,7 +89,7 @@ export const useJobExtraction = () => {
 
   const sendJobToAPI = async (jobData: JobData) => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/analyze-job', {
+      const response = await fetch(`${API_BASE_URL}/api/analyze-job`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

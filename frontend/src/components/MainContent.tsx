@@ -93,20 +93,18 @@ const MainContent: React.FC<MainContentProps> = ({
   };
 
   return (
-    <main className="p-6 overflow-y-auto bg-white relative min-w-0 flex flex-col h-full">
+    <main className="px-6 pt-1 pb-4 overflow-y-auto bg-white relative min-w-0 flex flex-col h-full">
       <div className="flex items-center justify-start">
         <div className="w-full">
           {renderSection()}
         </div>
       </div>
 
-      {/* Version info - Hidden only for results section to avoid duplication with new design */}
-      {currentSection !== 'results' && (
-        <div className="text-center text-xs text-gray-400 mt-8">
-          <div>IntrvuFit v0.0.7</div>
-          <div>All rights reserved © 2025 intrvu.ca</div>
-        </div>
-      )}
+      {/* Version info */}
+      <div className="text-center text-xs text-gray-400 mt-8">
+        <div>IntrvuFit v0.0.7</div>
+        <div>All rights reserved © 2025 intrvu.ca</div>
+      </div>
     </main>
   );
 };

@@ -38,7 +38,7 @@ function App() {
     <div className="flex bg-white w-full h-full overflow-hidden">
       <div className="flex flex-col overflow-hidden flex-1 min-w-0">
         <Header />
-        <div className="p-4">
+        <div className="px-4 pt-3 pb-1">
           <LinkedInJobExtractor onJobDataExtracted={handleJobDataExtracted} />
         </div>
         <MainContent

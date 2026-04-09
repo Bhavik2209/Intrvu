@@ -1,5 +1,60 @@
 // Background script for IntrvuFit Chrome Extension
 
+function isLinkedInJobUrl(url) {
+  if (!url) return false;
+  return /linkedin\.com\/(jobs\/(view|search|collections)|company\/.*\/jobs|jobs\/)/i.test(url);
+}
+
+async function ensureJobScriptsInjected(tabId, url) {
+  if (!tabId || !isLinkedInJobUrl(url)) return;
+
+  try {
+    await chrome.tabs.sendMessage(tabId, { action: 'PING_CONTENT_SCRIPT' });
+    return;
+  } catch {
+    console.log('Background: Content script not reachable, injecting scripts on tab:', tabId);
+  }
+
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['content-script.js', 'launcher-button.js']
+    });
+    console.log('Background: Job scripts injected on tab:', tabId);
+  } catch (injectionError) {
+    console.error('Background: Failed to inject job scripts:', injectionError);
+  }
+}
+
+async function openPanelOnJobTab(tabId, url) {
+  if (!tabId || !isLinkedInJobUrl(url)) return;
+
+  try {
+    await chrome.tabs.sendMessage(tabId, { action: 'OPEN_PANEL' });
+    return;
+  } catch {
+    // Injector may not be active yet, inject then retry.
+  }
+
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['side-panel-injector.js']
+    });
+  } catch (injectionError) {
+    console.error('Background: Failed to inject side panel injector:', injectionError);
+    return;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 250));
+
+  try {
+    await chrome.tabs.sendMessage(tabId, { action: 'OPEN_PANEL' });
+  } catch (sendError) {
+    console.error('Background: Failed to auto-open panel on job tab:', sendError);
+  }
+}
+
 // Handle messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background: Received message:', message);
@@ -44,11 +99,32 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       tabId: tabId
     });
   }
+
+  if (typeof changeInfo.url === 'string') {
+    ensureJobScriptsInjected(tabId, changeInfo.url);
+    openPanelOnJobTab(tabId, changeInfo.url);
+  }
+
+  if (changeInfo.status === 'complete') {
+    ensureJobScriptsInjected(tabId, tab?.url);
+    openPanelOnJobTab(tabId, tab?.url);
+  }
 });
 
 // Handle extension installation
 chrome.runtime.onInstalled.addListener(() => {
   console.log('IntrvuFit extension installed');
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  const tabs = await chrome.tabs.query({
+    url: ['https://www.linkedin.com/*', 'https://*.linkedin.com/*']
+  });
+
+  for (const tab of tabs) {
+    await ensureJobScriptsInjected(tab.id, tab.url);
+    await openPanelOnJobTab(tab.id, tab.url);
+  }
 });
 
 // Handle action click to toggle side panel

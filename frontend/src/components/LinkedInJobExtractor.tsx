@@ -21,6 +21,107 @@ const LinkedInJobExtractor: React.FC<LinkedInJobExtractorProps> = ({ onJobDataEx
   const [, setError] = useState<string | null>(null);
   const [currentUrl, setCurrentUrl] = useState('');
 
+  const isLinkedInJobContext = (url?: string) => {
+    if (!url) return false;
+    return /linkedin\.com\/(jobs\/(view|search|collections)|company\/.*\/jobs|jobs\/)/i.test(url);
+  };
+
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> => {
+    let timeoutId: number | undefined;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = globalThis.setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+    });
+
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timeoutId) {
+        globalThis.clearTimeout(timeoutId);
+      }
+    }
+  };
+
+  const requestFromContentScript = (tabId: number, action: 'getJobDetails' | 'extractNow' | 'PING_CONTENT_SCRIPT') => {
+    return new Promise<any>((resolve, reject) => {
+      (chrome as any).tabs.sendMessage(tabId, { action }, (response: any) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message || 'Content script communication failed'));
+          return;
+        }
+        resolve(response);
+      });
+    });
+  };
+
+  const readStoredJobData = async () => {
+    if (!(chrome as any)?.storage?.local) return null;
+    const stored = await (chrome as any).storage.local.get(['currentJobData', 'lastExtracted']);
+    const data = stored?.currentJobData;
+    if (data?.jobDescription && data.jobDescription.length >= 120) {
+      return data;
+    }
+    return null;
+  };
+
+  const ensureContentScriptReady = async (tabId: number) => {
+    try {
+      await withTimeout(requestFromContentScript(tabId, 'PING_CONTENT_SCRIPT'), 1000, 'Content script ping timeout');
+      return;
+    } catch {
+      await (chrome as any).scripting.executeScript({
+        target: { tabId },
+        files: ['content-script.js', 'launcher-button.js']
+      });
+      await wait(250);
+      await withTimeout(requestFromContentScript(tabId, 'PING_CONTENT_SCRIPT'), 1500, 'Content script injection did not initialize');
+    }
+  };
+
+  const getJobDataWithRetry = async (tabId: number) => {
+    const maxAttempts = 5;
+
+    await ensureContentScriptReady(tabId);
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const cached = await readStoredJobData();
+        if (cached) return cached;
+
+        const response: any = await withTimeout(
+          requestFromContentScript(tabId, 'getJobDetails'),
+          2500,
+          'Timed out getting job details'
+        );
+        const data = response?.data;
+
+        if (data?.jobDescription && data.jobDescription.length >= 120) {
+          return data;
+        }
+
+        const forced: any = await withTimeout(
+          requestFromContentScript(tabId, 'extractNow'),
+          3500,
+          'Timed out forcing extraction'
+        );
+        const forcedData = forced?.data;
+        if (forcedData?.jobDescription && forcedData.jobDescription.length >= 120) {
+          return forcedData;
+        }
+      } catch (error) {
+        if (attempt === maxAttempts) throw error;
+      }
+
+      if (attempt < maxAttempts) {
+        await wait(350);
+      }
+    }
+
+    return await readStoredJobData();
+  };
+
   const handleExtractedData = (data: any) => {
     const jobData: JobData = {
       jobTitle: data.jobTitle || 'Unknown Title',
@@ -50,43 +151,19 @@ const LinkedInJobExtractor: React.FC<LinkedInJobExtractorProps> = ({ onJobDataEx
 
       console.log('Requesting job details from content script...');
 
-      // Request data from content script
       try {
-        const response: any = await new Promise((resolve, reject) => {
-          (chrome as any).tabs.sendMessage(tab.id, { action: 'getJobDetails' }, (response: any) => {
-            if (chrome.runtime.lastError) {
-              // If content script isn't ready, try to inject it or wait
-              console.log('Content script not ready, error:', chrome.runtime.lastError);
-              reject(new Error('Content script not ready. Please refresh the page.'));
-            } else {
-              resolve(response);
-            }
-          });
-        });
+        const data = await withTimeout(
+          getJobDataWithRetry(tab.id),
+          18000,
+          'Extraction timed out. Please keep the job details section visible and try again.'
+        );
+        console.log('Received data from content script:', data);
 
-        if (response && response.data) {
-          const data = response.data;
-          console.log('Received data from content script:', data);
-
-          // Validate data
-          if (!data.jobDescription || data.jobDescription.length < 100) {
-            // Try to force extraction if data is missing
-            const forceResponse: any = await new Promise((resolve) => {
-              (chrome as any).tabs.sendMessage(tab.id, { action: 'extractNow' }, resolve);
-            });
-
-            if (forceResponse && forceResponse.data) {
-              handleExtractedData(forceResponse.data);
-              return;
-            }
-
-            throw new Error('No job description found. Please scroll to the "About the job" section.');
-          }
-
-          handleExtractedData(data);
-        } else {
-          throw new Error('Invalid response from content script');
+        if (!data) {
+          throw new Error('No job description found yet. Please wait a second and try again.');
         }
+
+        handleExtractedData(data);
 
       } catch (err: any) {
         console.error('Message passing failed:', err);
@@ -116,11 +193,7 @@ const LinkedInJobExtractor: React.FC<LinkedInJobExtractorProps> = ({ onJobDataEx
         setCurrentUrl(tab.url);
 
         // Check if we should extract immediately
-        const shouldExtract = tab.url && (
-          (tab.url.includes('linkedin.com/jobs/') && (tab.url.includes('currentJobId=') || tab.url.includes('/view/'))) ||
-          tab.url.includes('linkedin.com/job/') ||
-          (tab.url.includes('linkedin.com/company/') && tab.url.includes('/jobs/') && (tab.url.includes('currentJobId=') || tab.url.includes('/view/')))
-        );
+        const shouldExtract = isLinkedInJobContext(tab.url);
 
         if (shouldExtract) {
           console.log('✅ Valid job page detected - starting extraction in 1 second');
@@ -146,11 +219,7 @@ const LinkedInJobExtractor: React.FC<LinkedInJobExtractorProps> = ({ onJobDataEx
       const becameComplete = changeInfo.status === 'complete';
       const urlChanged = typeof changeInfo.url === 'string';
       if (!(becameComplete || urlChanged)) return;
-      const isJob = newUrl && (
-        (newUrl.includes('linkedin.com/jobs/') && (newUrl.includes('currentJobId=') || newUrl.includes('/view/'))) ||
-        newUrl.includes('linkedin.com/job/') ||
-        (newUrl.includes('linkedin.com/company/') && newUrl.includes('/jobs/') && (newUrl.includes('currentJobId=') || newUrl.includes('/view/')))
-      );
+      const isJob = isLinkedInJobContext(newUrl);
       if (!isJob) return;
       window.clearTimeout(debounceTimer);
       debounceTimer = window.setTimeout(() => {
@@ -180,11 +249,7 @@ const LinkedInJobExtractor: React.FC<LinkedInJobExtractorProps> = ({ onJobDataEx
     if (extractionStatus === 'error') return 'status-invalid';
     if (!currentUrl) return 'status-checking';
     // Check if current URL is a specific job page
-    const isSpecificJob = currentUrl && (
-      (currentUrl.includes('linkedin.com/jobs/') && (currentUrl.includes('currentJobId=') || currentUrl.includes('/view/'))) ||
-      currentUrl.includes('linkedin.com/job/') ||
-      (currentUrl.includes('linkedin.com/company/') && currentUrl.includes('/jobs/') && (currentUrl.includes('currentJobId=') || currentUrl.includes('/view/')))
-    );
+    const isSpecificJob = isLinkedInJobContext(currentUrl);
     if (isSpecificJob) return 'status-valid';
     return 'status-invalid';
   };
@@ -196,21 +261,13 @@ const LinkedInJobExtractor: React.FC<LinkedInJobExtractorProps> = ({ onJobDataEx
           {extractionStatus === 'extracting' ? '🔄' :
             extractionStatus === 'success' ? '✅' :
               extractionStatus === 'error' ? '❌' :
-                currentUrl && (
-                  (currentUrl.includes('linkedin.com/jobs/') && (currentUrl.includes('currentJobId=') || currentUrl.includes('/view/'))) ||
-                  currentUrl.includes('linkedin.com/job/') ||
-                  (currentUrl.includes('linkedin.com/company/') && currentUrl.includes('/jobs/') && (currentUrl.includes('currentJobId=') || currentUrl.includes('/view/')))
-                ) ? '✅' : '❌'}
+                isLinkedInJobContext(currentUrl) ? '✅' : '❌'}
         </span>
         <span className="status-text">
           {extractionStatus === 'extracting' ? 'Extracting job details...' :
             extractionStatus === 'success' && jobData ? `${jobData.jobTitle} at ${jobData.company}` :
               extractionStatus === 'error' ? 'Extraction failed' :
-                currentUrl && (
-                  (currentUrl.includes('linkedin.com/jobs/') && (currentUrl.includes('currentJobId=') || currentUrl.includes('/view/'))) ||
-                  currentUrl.includes('linkedin.com/job/') ||
-                  (currentUrl.includes('linkedin.com/company/') && currentUrl.includes('/jobs/') && (currentUrl.includes('currentJobId=') || currentUrl.includes('/view/')))
-                ) ? 'LinkedIn job page detected' : 'Navigate to LinkedIn job page'}
+                isLinkedInJobContext(currentUrl) ? 'LinkedIn job page detected' : 'Navigate to LinkedIn job page'}
         </span>
         {(extractionStatus === 'idle' || extractionStatus === 'error') && (
           <button

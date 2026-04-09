@@ -142,12 +142,7 @@ const ResultsView: React.FC<ResultsSectionProps> = ({
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="text-center mt-8 pt-4 border-t border-gray-100">
-        <div className="text-[9px] font-medium text-[#94a3b8] uppercase tracking-widest leading-tight">
-          <p>internship v3.0.2 • All rights reserved © 2025 Intrvu.ca</p>
-        </div>
-      </div>
+      {/* Footer removed to avoid duplication with global footer */}
     </div>
   );
 };

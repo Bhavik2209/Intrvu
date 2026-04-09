@@ -123,6 +123,33 @@ function togglePanel() {
     }
 }
 
+function openPanel() {
+    if (!panelContainer) {
+        createPanel();
+
+        // The panel creation path is callback-based; retry briefly until container exists.
+        let retries = 0;
+        const maxRetries = 15;
+        const intervalId = setInterval(() => {
+            retries += 1;
+            if (panelContainer) {
+                clearInterval(intervalId);
+                showPanel();
+                return;
+            }
+
+            if (retries >= maxRetries) {
+                clearInterval(intervalId);
+                console.warn('IntrvuFit: Could not open panel after creation retries');
+            }
+        }, 100);
+
+        return;
+    }
+
+    showPanel();
+}
+
 function showPanel() {
     if (!panelContainer) return;
 
@@ -244,6 +271,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'TOGGLE_PANEL') {
         togglePanel();
         sendResponse({ success: true, visible: isPanelVisible });
+    } else if (request.action === 'OPEN_PANEL') {
+        openPanel();
+        sendResponse({ success: true, visible: true });
     }
 
     return true;

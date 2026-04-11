@@ -20,11 +20,16 @@ setup_logging()
 # Add the parent directory to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+is_production = settings.environment.lower() in {"production", "prod"}
+
 # Create a new FastAPI instance
 app = FastAPI(
     title="Resume Analysis API",
     description="Secure API for analyzing resumes against job descriptions",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url=None if is_production else "/docs",
+    redoc_url=None if is_production else "/redoc",
+    openapi_url=None if is_production else "/openapi.json",
 )
 
 # Add rate limiter

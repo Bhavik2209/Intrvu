@@ -197,7 +197,7 @@ Key settings in `manifest.json`:
 ```json
 {
   "name": "IntrvuFit - Resume optimizer",
-  "version": "0.0.7",
+  "version": "0.0.9",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
     "https://www.linkedin.com/*",
@@ -265,10 +265,10 @@ npm run build
 
 ```bash
 # Windows PowerShell
-Compress-Archive -Path dist\* -DestinationPath IntrvuFit_v0.0.7.zip
+Compress-Archive -Path dist\* -DestinationPath IntrvuFit_v0.0.9.zip
 
 # Linux/Mac
-cd dist && zip -r ../IntrvuFit_v0.0.7.zip * && cd ..
+cd dist && zip -r ../IntrvuFit_v0.0.9.zip * && cd ..
 ```
 
 ### Chrome Web Store Submission

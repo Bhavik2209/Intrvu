@@ -102,7 +102,7 @@ const MainContent: React.FC<MainContentProps> = ({
 
       {/* Version info */}
       <div className="text-center text-xs text-gray-400 mt-8">
-        <div>IntrvuFit v0.0.7</div>
+        <div>IntrvuFit v0.0.9</div>
         <div>All rights reserved © 2025 intrvu.ca</div>
       </div>
     </main>

@@ -20,7 +20,9 @@ setup_logging()
 # Add the parent directory to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-is_production = settings.environment.lower() in {"production", "prod"}
+runtime_environment = (os.getenv("ENVIRONMENT") or os.getenv("ENV") or settings.environment or "").lower()
+is_render = os.getenv("RENDER", "").lower() == "true"
+is_production = runtime_environment in {"production", "prod"} or is_render
 
 # Create a new FastAPI instance
 app = FastAPI(

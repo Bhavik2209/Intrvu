@@ -3,375 +3,233 @@ import { Check, Loader2 } from 'lucide-react';
 import { SectionType } from '../../App';
 import { AnalysisData } from '../../types/AnalysisData';
 import { useJobExtraction } from '../../hooks/useJobExtraction';
-import { API_BASE_URL } from '../../config';
+import { API_BASE_URL, API_KEY } from '../../config';
 import { JobData } from '../../types/JobData';
+import {
+  getJobFitLabel,
+  getResumeQualityLabel,
+  getScoreSymbol
+} from '../../utils/scoreDisplay';
 
 // Transform backend response to match frontend expected format
 const transformBackendResponse = (backendData: any): AnalysisData => {
-  const analysis = backendData.analysis;
+  const analysis = backendData?.analysis ?? {};
+  const fitComponents = analysis?.jobFitScore?.components ?? {};
+  const qualityComponents = analysis?.resumeQualityScore?.components ?? {};
 
-  // Helper to normalize keyword-like inputs from backend into consistent objects
-  const normKeywordItem = (input: any, defaults: { points: number; status: string; symbol: string }) => {
-    try {
-      if (typeof input === 'string') {
-        return { keyword: input, ...defaults };
-      }
-      if (input && typeof input === 'object') {
-        const keywordVal = typeof input.keyword === 'string'
-          ? input.keyword
-          : typeof input.name === 'string'
-            ? input.name
-            : typeof input.text === 'string'
-              ? input.text
-              : JSON.stringify(input);
-        return {
-          keyword: keywordVal,
-          points: typeof input.points === 'number' ? input.points : defaults.points,
-          status: typeof input.status === 'string' ? input.status : defaults.status,
-          symbol: typeof input.symbol === 'string' ? input.symbol : defaults.symbol,
-        };
-      }
-      return { keyword: String(input), ...defaults };
-    } catch {
-      return { keyword: String(input), ...defaults };
-    }
+  const toNumber = (value: any, fallback = 0) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
   };
 
-  // Calculate component scores with proper max points
-  const maxJobFitPoints = 35 + 30 + 15; // keyword_match + job_experience + skills_tools
-  const maxResumeQualityPoints = 20 + 30 + 25 + 25 + 20; // education + structure + action_words + measurable + bullets
+  const toString = (value: any, fallback = '') => {
+    if (typeof value === 'string') return value;
+    if (value === null || value === undefined) return fallback;
+    return String(value);
+  };
 
-  // Calculate job fit score (skills, experience, keywords)
-  const jobFitRawScore =
-    (analysis.keyword_match?.score?.pointsAwarded ?? 0) +
-    (analysis.job_experience?.score?.pointsAwarded ?? 0) +
-    ((analysis.skills_tools ?? analysis.skills_certifications)?.score?.pointsAwarded ?? 0);
+  const toArray = (value: any) => (Array.isArray(value) ? value : []);
 
-  const jobFitPercentage = maxJobFitPoints > 0
-    ? Math.min(100, Math.round((jobFitRawScore / maxJobFitPoints) * 100))
-    : 0;
+  const keywordSource = analysis?.keyword_match ?? fitComponents?.keywordMatch ?? {};
+  const experienceSource = analysis?.job_experience ?? fitComponents?.experienceAlignment ?? {};
+  const educationSource = analysis?.education_certifications ?? fitComponents?.educationRequirement ?? {};
+  const skillsSource = analysis?.skills_tools ?? analysis?.skills_certifications ?? fitComponents?.skillsToolsMatch ?? {};
+  const structureSource = analysis?.resume_structure ?? qualityComponents?.structure ?? {};
+  const actionSource = analysis?.action_words ?? qualityComponents?.actionWords ?? {};
+  const measurableSource = analysis?.measurable_results ?? qualityComponents?.measurableResults ?? {};
+  const bulletSource = analysis?.bullet_point_effectiveness ?? qualityComponents?.bulletEffectiveness ?? {};
 
-  // Calculate resume quality score (structure, education, action words, measurable results, bullets)
-  const resumeQualityRawScore =
-    ((analysis.skills_certifications ?? analysis.education_certifications)?.score?.pointsAwarded ?? 0) +
-    (analysis.resume_structure?.score?.pointsAwarded ?? 0) +
-    (analysis.action_words?.score?.pointsAwarded ?? 0) +
-    (analysis.measurable_results?.score?.pointsAwarded ?? 0) +
-    (analysis.bullet_point_effectiveness?.score?.pointsAwarded ?? 0);
+  const keywordPoints = toNumber(keywordSource?.score?.pointsAwarded);
+  const experiencePoints = toNumber(experienceSource?.score?.pointsAwarded);
+  const educationPoints = toNumber(educationSource?.score?.pointsAwarded);
+  const skillsPoints = toNumber(skillsSource?.score?.pointsAwarded);
+  const jobFitRawScore = keywordPoints + experiencePoints + educationPoints + skillsPoints;
+  const fallbackJobFitPct = Math.max(0, Math.min(100, Math.round(jobFitRawScore)));
+  const jobFitPercentage = Math.max(
+    0,
+    Math.min(100, Math.round(toNumber(analysis?.jobFitScore?.score, fallbackJobFitPct)))
+  );
+  const fitLabel = toString(analysis?.jobFitScore?.label) || getJobFitLabel(jobFitPercentage);
 
-  const resumeQualityPercentage = maxResumeQualityPoints > 0
-    ? Math.min(100, Math.round((resumeQualityRawScore / maxResumeQualityPoints) * 100))
-    : 0;
+  const structurePoints = toNumber(structureSource?.score?.pointsAwarded);
+  const actionPoints = toNumber(actionSource?.score?.pointsAwarded);
+  const measurablePoints = toNumber(measurableSource?.score?.pointsAwarded);
+  const bulletPoints = toNumber(bulletSource?.score?.pointsAwarded);
+  const resumeQualityRawScore = structurePoints + actionPoints + measurablePoints + bulletPoints;
+  const fallbackQualityPct = Math.max(0, Math.min(100, Math.round(resumeQualityRawScore)));
+  const resumeQualityPercentage = Math.max(
+    0,
+    Math.min(100, Math.round(toNumber(analysis?.resumeQualityScore?.score, fallbackQualityPct)))
+  );
+  const qualityLabel = toString(analysis?.resumeQualityScore?.tier) || getResumeQualityLabel(resumeQualityPercentage);
+
+  const normalizedStrongMatches = toArray(keywordSource?.analysis?.strongMatches).length > 0
+    ? toArray(keywordSource?.analysis?.strongMatches)
+    : toArray(keywordSource?.analysis?.matchedKeywords).map((item: any) => ({
+      keyword: toString(item?.keyword || item),
+      points: toNumber(item?.points, 2),
+      status: toString(item?.status, 'Strong Match'),
+      symbol: toString(item?.symbol, 'OK')
+    }));
 
   return {
-    version: "v3.0",
+    version: toString(analysis?.version, 'v4.0'),
     job_fit_score: {
-      total_points: jobFitRawScore,
+      total_points: toNumber(analysis?.jobFitScore?.score, jobFitRawScore),
       percentage: jobFitPercentage,
-      label: jobFitPercentage >= 80 ? "✅ Excellent Match" :
-        jobFitPercentage >= 70 ? "👍 Good Match" :
-          jobFitPercentage >= 60 ? "⚠️ Fair Match" : "❌ Poor Match",
-      symbol: jobFitPercentage >= 80 ? "✅" :
-        jobFitPercentage >= 70 ? "👍" :
-          jobFitPercentage >= 60 ? "⚠️" : "❌"
+      label: fitLabel,
+      symbol: getScoreSymbol(fitLabel)
     },
     resume_quality_score: {
-      total_points: resumeQualityRawScore,
+      total_points: toNumber(analysis?.resumeQualityScore?.score, resumeQualityRawScore),
       percentage: resumeQualityPercentage,
-      label: resumeQualityPercentage >= 80 ? "✅ Excellent Quality" :
-        resumeQualityPercentage >= 70 ? "👍 Good Quality" :
-          resumeQualityPercentage >= 60 ? "⚠️ Needs Polish" : "❌ Poor Quality",
-      symbol: resumeQualityPercentage >= 80 ? "✅" :
-        resumeQualityPercentage >= 70 ? "👍" :
-          resumeQualityPercentage >= 60 ? "⚠️" : "❌"
+      label: qualityLabel,
+      symbol: getScoreSymbol(qualityLabel)
     },
     detailed_analysis: {
       keyword_match: {
         score: {
-          matchPercentage: analysis.keyword_match.score.matchPercentage,
-          pointsAwarded: analysis.keyword_match.score.pointsAwarded,
-          maxPoints: 35,
-          rating: analysis.keyword_match.score.rating,
-          ratingSymbol: analysis.keyword_match.score.ratingSymbol
+          matchPercentage: toNumber(keywordSource?.score?.matchPercentage),
+          pointsAwarded: keywordPoints,
+          maxPoints: toNumber(keywordSource?.score?.maxPoints, 35),
+          rating: toString(keywordSource?.score?.rating, 'Unknown'),
+          ratingSymbol: toString(keywordSource?.score?.ratingSymbol, '')
         },
         analysis: {
-          strongMatches: (Array.isArray(analysis.keyword_match.analysis.strongMatches) && analysis.keyword_match.analysis.strongMatches.length > 0)
-            ? analysis.keyword_match.analysis.strongMatches
-            : (Array.isArray(analysis.keyword_match.analysis.matchedKeywords) ? analysis.keyword_match.analysis.matchedKeywords : [])
-              .map((kw: any) => normKeywordItem(kw, { points: 2, status: 'Strong Match', symbol: '✅' })),
-          partialMatches: Array.isArray(analysis.keyword_match.analysis.partialMatches)
-            ? analysis.keyword_match.analysis.partialMatches
-            : [],
-          missingKeywords: (Array.isArray(analysis.keyword_match.analysis.missingKeywords) ? analysis.keyword_match.analysis.missingKeywords : [])
-            .map((kw: any) => normKeywordItem(kw, { points: -1, status: 'Missing', symbol: '❌' })),
-          suggestedImprovements: analysis.keyword_match.analysis.suggestedImprovements
+          strongMatches: normalizedStrongMatches,
+          partialMatches: toArray(keywordSource?.analysis?.partialMatches),
+          missingKeywords: toArray(keywordSource?.analysis?.missingKeywords),
+          suggestedImprovements: toString(keywordSource?.analysis?.suggestedImprovements, '')
         }
       },
       job_experience: {
         score: {
-          alignmentPercentage: analysis.job_experience.score.alignmentPercentage,
-          pointsAwarded: analysis.job_experience.score.pointsAwarded,
-          maxPoints: 30,
-          rating: analysis.job_experience.score.rating,
-          ratingSymbol: analysis.job_experience.score.ratingSymbol
+          alignmentPercentage: toNumber(experienceSource?.score?.alignmentPercentage),
+          pointsAwarded: experiencePoints,
+          maxPoints: toNumber(experienceSource?.score?.maxPoints, 30),
+          rating: toString(experienceSource?.score?.rating, 'Unknown'),
+          ratingSymbol: toString(experienceSource?.score?.ratingSymbol, '')
         },
         analysis: {
-          strongMatches: (analysis.job_experience.analysis.strongMatches ?? []).map((match: any) => ({
-            role: match.responsibility,
-            points: 3,
-            status: match.status,
-            notes: match.notes,
-            symbol: "✅"
+          strongMatches: toArray(experienceSource?.analysis?.strongMatches).map((item: any) => ({
+            role: toString(item?.role || item?.responsibility),
+            points: toNumber(item?.points, 0),
+            status: toString(item?.status),
+            notes: toString(item?.notes),
+            symbol: toString(item?.symbol)
           })),
-          partialMatches: (analysis.job_experience.analysis.partialMatches ?? []).map((match: any) => ({
-            role: match.responsibility,
-            points: 1.5,
-            status: match.status,
-            notes: match.notes,
-            symbol: "⚠️"
+          partialMatches: toArray(experienceSource?.analysis?.partialMatches).map((item: any) => ({
+            role: toString(item?.role || item?.responsibility),
+            points: toNumber(item?.points, 0),
+            status: toString(item?.status),
+            notes: toString(item?.notes),
+            symbol: toString(item?.symbol)
           })),
-          misalignedRoles: (analysis.job_experience.analysis.missingExperience ?? []).map((exp: any) => ({
-            role: exp.responsibility,
-            points: -1,
-            status: exp.status,
-            notes: exp.notes,
-            symbol: "❌"
-          })),
-          suggestedImprovements: analysis.job_experience.analysis.suggestedImprovements
+          misalignedRoles: toArray(experienceSource?.analysis?.misalignedRoles ?? experienceSource?.analysis?.missingExperience),
+          suggestedImprovements: toString(experienceSource?.analysis?.suggestedImprovements, '')
         }
       },
       education_certifications: {
         score: {
-          passed: analysis.jobFitScore?.components?.educationRequirement?.score?.passed ?? false,
-          pointsAwarded: analysis.jobFitScore?.components?.educationRequirement?.score?.pointsAwarded ?? 0,
-          maxPoints: analysis.jobFitScore?.components?.educationRequirement?.score?.maxPoints ?? 20,
-          rating: analysis.jobFitScore?.components?.educationRequirement?.score?.rating
-            ?? analysis.education_certifications?.score?.rating
-            ?? 'Not Met',
-          ratingSymbol: analysis.jobFitScore?.components?.educationRequirement?.score?.ratingSymbol
-            ?? analysis.education_certifications?.score?.ratingSymbol
-            ?? '❌',
-          matchPercentage: analysis.education_certifications?.score?.matchPercentage
-            ?? analysis.education_certifications?.score?.educationCertificationMatchPercentage
-            ?? undefined
+          passed: Boolean(educationSource?.score?.passed),
+          pointsAwarded: educationPoints,
+          maxPoints: toNumber(educationSource?.score?.maxPoints, 20),
+          rating: toString(educationSource?.score?.rating, 'Unknown'),
+          ratingSymbol: toString(educationSource?.score?.ratingSymbol, ''),
+          matchPercentage: toNumber(
+            educationSource?.score?.matchPercentage ?? educationSource?.score?.educationCertificationMatchPercentage,
+            0
+          )
         },
         analysis: {
-          status: analysis.jobFitScore?.components?.educationRequirement?.analysis?.status ?? 'Unknown',
-          degreeFound: analysis.jobFitScore?.components?.educationRequirement?.analysis?.degreeFound ?? 'None',
-          degreeType: analysis.jobFitScore?.components?.educationRequirement?.analysis?.degreeType ?? 'None',
-          fieldOfStudy: analysis.jobFitScore?.components?.educationRequirement?.analysis?.fieldOfStudy ?? '',
-          suggestedImprovements: analysis.jobFitScore?.components?.educationRequirement?.analysis?.suggestedImprovements
-            ?? analysis.education_certifications?.analysis?.suggestedImprovements
-            ?? '',
-          educationMatch: analysis.education_certifications?.analysis?.educationMatch
-            ?? analysis.jobFitScore?.components?.educationRequirement?.analysis?.educationMatch
-            ?? [],
-          certificationMatches: analysis.education_certifications?.analysis?.certificationMatches
-            ?? analysis.jobFitScore?.components?.educationRequirement?.analysis?.certificationMatches
-            ?? [],
-          missingCredentials: analysis.education_certifications?.analysis?.missingCredentials
-            ?? analysis.jobFitScore?.components?.educationRequirement?.analysis?.missingCredentials
-            ?? []
+          status: toString(educationSource?.analysis?.status, ''),
+          degreeFound: toString(educationSource?.analysis?.degreeFound, 'None'),
+          degreeType: toString(educationSource?.analysis?.degreeType, 'None'),
+          fieldOfStudy: toString(educationSource?.analysis?.fieldOfStudy, ''),
+          suggestedImprovements: toString(educationSource?.analysis?.suggestedImprovements, ''),
+          educationMatch: toArray(educationSource?.analysis?.educationMatch),
+          certificationMatches: toArray(educationSource?.analysis?.certificationMatches),
+          missingCredentials: toArray(educationSource?.analysis?.missingCredentials)
         }
       },
-      // Prefer backend V3 skills_tools if present; otherwise derive from skills_certifications for backward compatibility
-      skills_tools: (() => {
-        const v3 = (analysis as any).skills_tools;
-        if (v3 && v3.score && v3.analysis) {
-          // Extract matched skills - normalize different backend formats
-          let matchedSkills = [];
-          if (Array.isArray(v3.analysis.matchedSkills)) {
-            matchedSkills = v3.analysis.matchedSkills;
-          } else if (Array.isArray(v3.analysis.hardSkillMatches)) {
-            matchedSkills = v3.analysis.hardSkillMatches;
-          }
-
-          return {
-            score: {
-              matchPercentage: v3.score.matchPercentage ?? v3.score.skillsMatchPercentage ?? 0,
-              pointsAwarded: v3.score.pointsAwarded ?? v3.score.skillsPointsAwarded ?? 0,
-              maxPoints: v3.score.maxPoints ?? 15,
-              rating: v3.score.rating ?? v3.score.skillsRating ?? '',
-              ratingSymbol: v3.score.ratingSymbol ?? v3.score.skillsRatingSymbol ?? ''
-            },
-            analysis: {
-              hardSkillMatches: matchedSkills.map((skill: any) => ({
-                skill: typeof skill === 'string' ? skill : (skill?.skill ?? skill?.name ?? String(skill)),
-                points: typeof skill === 'object' ? (skill.points ?? 1.0) : 1.0,
-                status: typeof skill === 'object' ? (skill.status ?? 'Found in Resume') : 'Found in Resume',
-                symbol: typeof skill === 'object' ? (skill.symbol ?? '✅') : '✅'
-              })),
-              softSkillMatches: Array.isArray(v3.analysis.softSkillMatches) ? v3.analysis.softSkillMatches : [],
-              missingSkills: Array.isArray(v3.analysis.missingSkills)
-                ? v3.analysis.missingSkills.map((skill: any) => ({
-                  skill: typeof skill === 'string' ? skill : (skill?.skill ?? String(skill)),
-                  points: -1,
-                  status: skill?.status ?? 'Not Found',
-                  symbol: skill?.symbol ?? '❌'
-                }))
-                : [],
-              doubleCountReductions: Array.isArray(v3.analysis.doubleCountReductions) ? v3.analysis.doubleCountReductions : [],
-              suggestedImprovements: v3.analysis.suggestedImprovements ?? ''
-            }
-          };
-        }
-        // Fallback to skills_certifications-derived structure
-        // Compute safe score fields when falling back to skills_certifications
-        const scScore = analysis.skills_certifications.score;
-        const scPts = Number(scScore?.skillsPointsAwarded ?? scScore?.pointsAwarded ?? 0);
-        const scMax = 15;
-        const scMp = typeof scScore?.skillsMatchPercentage === 'number'
-          ? scScore.skillsMatchPercentage
-          : Math.round(scMax > 0 ? (scPts / scMax) * 100 : 0);
-        let scRating = scScore?.skillsRating as string | undefined;
-        let scRatingSymbol = scScore?.skillsRatingSymbol as string | undefined;
-        if (!scRating) {
-          if (scPts >= 13) {
-            scRating = 'Excellent'; scRatingSymbol = '✅';
-          } else if (scPts >= 10) {
-            scRating = 'Good'; scRatingSymbol = '👍';
-          } else if (scPts >= 7) {
-            scRating = 'Fair'; scRatingSymbol = '⚠️';
-          } else if (scPts >= 4) {
-            scRating = 'Needs Improvement'; scRatingSymbol = '🛑';
-          } else {
-            scRating = 'Poor'; scRatingSymbol = '❌';
-          }
-        }
-        return {
-          score: {
-            matchPercentage: scMp,
-            pointsAwarded: scPts,
-            maxPoints: scMax,
-            rating: scRating,
-            ratingSymbol: scRatingSymbol ?? ''
-          },
-          analysis: {
-            hardSkillMatches: (analysis.skills_certifications.analysis.hardSkillMatches ?? []).map((skill: any) => ({
-              skill: skill.skill,
-              points: skill.points ?? 1.0,
-              status: skill.status,
-              symbol: skill.symbol
-            })),
-            softSkillMatches: (analysis.skills_certifications.analysis.softSkillMatches ?? []).map((skill: any) => ({
-              skill: skill.skill,
-              points: skill.points ?? 0.5,
-              status: skill.status,
-              symbol: skill.symbol
-            })),
-            missingSkills: (analysis.skills_certifications.analysis.missingSkills ?? []).map((skill: any) => ({
-              skill: skill.skill,
-              points: skill.points ?? -1,
-              status: skill.status,
-              symbol: skill.symbol
-            })),
-            doubleCountReductions: analysis.skills_certifications.analysis.doubleCountReductions ?? [],
-            suggestedImprovements: analysis.skills_certifications.analysis.suggestedImprovements
-          }
-        };
-      })(),
-      resume_structure: {
+      skills_tools: {
         score: {
-          pointsAwarded: analysis.resume_structure.score.pointsAwarded,
-          maxPoints: 30,
-          completedMustHave: analysis.resume_structure.score.completedSections,
-          totalMustHave: analysis.resume_structure.score.totalMustHaveSections,
-          completedNiceToHave: 0,
-          bonusPoints: 0,
-          rating: "Excellent",
-          ratingSymbol: analysis.resume_structure.score.ratingSymbol
+          matchPercentage: toNumber(skillsSource?.score?.matchPercentage ?? skillsSource?.score?.skillsMatchPercentage),
+          pointsAwarded: skillsPoints,
+          maxPoints: toNumber(skillsSource?.score?.maxPoints, 15),
+          rating: toString(skillsSource?.score?.rating ?? skillsSource?.score?.skillsRating, 'Unknown'),
+          ratingSymbol: toString(skillsSource?.score?.ratingSymbol ?? skillsSource?.score?.skillsRatingSymbol, '')
         },
         analysis: {
-          sectionStatus: (analysis.resume_structure.analysis.sectionStatus ?? []).map((section: any) => ({
-            section: section.section,
-            type: "Must-Have",
-            status: section.status,
-            points: section.status === "Completed" ? 5 : 0,
-            symbol: section.symbol
-          })),
-          suggestedImprovements: analysis.resume_structure.analysis.suggestedImprovements
+          hardSkillMatches: toArray(skillsSource?.analysis?.hardSkillMatches),
+          softSkillMatches: toArray(skillsSource?.analysis?.softSkillMatches),
+          missingSkills: toArray(skillsSource?.analysis?.missingSkills),
+          doubleCountReductions: toArray(skillsSource?.analysis?.doubleCountReductions),
+          suggestedImprovements: toString(skillsSource?.analysis?.suggestedImprovements, '')
+        }
+      },
+      resume_structure: {
+        score: {
+          pointsAwarded: structurePoints,
+          maxPoints: toNumber(structureSource?.score?.maxPoints, 30),
+          completedMustHave: toNumber(structureSource?.score?.completedMustHave ?? structureSource?.score?.completedSections),
+          totalMustHave: toNumber(structureSource?.score?.totalMustHave ?? structureSource?.score?.totalMustHaveSections ?? structureSource?.score?.totalRequiredSections),
+          completedNiceToHave: toNumber(structureSource?.score?.completedNiceToHave, 0),
+          totalNiceToHave: toNumber(structureSource?.score?.totalNiceToHave, 0),
+          bonusPoints: toNumber(structureSource?.score?.bonusPoints, 0),
+          rating: toString(structureSource?.score?.rating, 'Unknown'),
+          ratingSymbol: toString(structureSource?.score?.ratingSymbol, '')
+        },
+        analysis: {
+          sectionStatus: toArray(structureSource?.analysis?.sectionStatus),
+          suggestedImprovements: toString(structureSource?.analysis?.suggestedImprovements, '')
         }
       },
       action_words: {
         score: {
-          actionVerbPercentage: analysis.action_words.score.actionVerbPercentage,
-          pointsAwarded: analysis.action_words.score.pointsAwarded,
-          maxPoints: 25,
-          rating: analysis.action_words.score.actionVerbPercentage >= 80 ? "Excellent" :
-            analysis.action_words.score.actionVerbPercentage >= 70 ? "Good" : "Fair",
-          ratingSymbol: analysis.action_words.score.ratingSymbol
+          actionVerbPercentage: toNumber(actionSource?.score?.actionVerbPercentage),
+          pointsAwarded: actionPoints,
+          maxPoints: toNumber(actionSource?.score?.maxPoints, 25),
+          rating: toString(actionSource?.score?.rating, 'Unknown'),
+          ratingSymbol: toString(actionSource?.score?.ratingSymbol, '')
         },
         analysis: {
-          strongActionVerbs: (analysis.action_words.analysis.strongActionVerbs ?? []).map((verb: any) => ({
-            bulletPoint: verb.bulletPoint,
-            actionVerb: verb.actionVerb,
-            points: 0.5,
-            status: verb.status,
-            symbol: verb.symbol
-          })),
-          weakActionVerbs: (analysis.action_words.analysis.weakActionVerbs ?? []).map((verb: any) => ({
-            bulletPoint: verb.bulletPoint,
-            actionVerb: verb.actionVerb,
-            points: -0.5,
-            suggestedReplacement: verb.suggestedReplacement,
-            status: verb.status,
-            symbol: verb.symbol
-          })),
-          clichesAndBuzzwords: [],
-          suggestedImprovements: analysis.action_words.analysis.suggestedImprovements
+          strongActionVerbs: toArray(actionSource?.analysis?.strongActionVerbs),
+          weakActionVerbs: toArray(actionSource?.analysis?.weakActionVerbs),
+          clichesAndBuzzwords: toArray(actionSource?.analysis?.clichesAndBuzzwords),
+          suggestedImprovements: toString(actionSource?.analysis?.suggestedImprovements, '')
         }
       },
       measurable_results: {
         score: {
-          measurableResultsCount: analysis.measurable_results.score.measurableResultsCount,
-          pointsAwarded: analysis.measurable_results.score.pointsAwarded,
-          maxPoints: 25,
-          rating: analysis.measurable_results.score.measurableResultsCount >= 8 ? "Excellent" :
-            analysis.measurable_results.score.measurableResultsCount >= 5 ? "Good" : "Fair",
-          ratingSymbol: analysis.measurable_results.score.ratingSymbol
+          measurableResultsCount: toNumber(measurableSource?.score?.measurableResultsCount),
+          pointsAwarded: measurablePoints,
+          maxPoints: toNumber(measurableSource?.score?.maxPoints, 25),
+          rating: toString(measurableSource?.score?.rating, 'Unknown'),
+          ratingSymbol: toString(measurableSource?.score?.ratingSymbol, '')
         },
         analysis: {
-          measurableResults: analysis.measurable_results.analysis.measurableResults || [],
-          opportunitiesForMetrics: (analysis.measurable_results.analysis.opportunitiesForMetrics ?? []).map((opp: any) => ({
-            bulletPoint: opp.bulletPoint,
-            suggestion: opp.suggestion,
-            symbol: opp.symbol
-          })),
-          suggestedImprovements: analysis.measurable_results.analysis.suggestedImprovements
+          measurableResults: toArray(measurableSource?.analysis?.measurableResults),
+          opportunitiesForMetrics: toArray(measurableSource?.analysis?.opportunitiesForMetrics),
+          suggestedImprovements: toString(measurableSource?.analysis?.suggestedImprovements, '')
         }
       },
       bullet_point_effectiveness: {
         score: {
-          effectiveBulletPercentage: analysis.bullet_point_effectiveness.score.effectiveBulletPercentage,
-          pointsAwarded: analysis.bullet_point_effectiveness.score.pointsAwarded,
-          maxPoints: 20,
-          rating: analysis.bullet_point_effectiveness.score.effectiveBulletPercentage >= 80 ? "Excellent" :
-            analysis.bullet_point_effectiveness.score.effectiveBulletPercentage >= 70 ? "Good" : "Fair",
-          ratingSymbol: analysis.bullet_point_effectiveness.score.ratingSymbol
+          effectiveBulletPercentage: toNumber(bulletSource?.score?.effectiveBulletPercentage),
+          pointsAwarded: bulletPoints,
+          maxPoints: toNumber(bulletSource?.score?.maxPoints, 20),
+          rating: toString(bulletSource?.score?.rating, 'Unknown'),
+          ratingSymbol: toString(bulletSource?.score?.ratingSymbol, '')
         },
         analysis: {
-          effectiveBullets: (analysis.bullet_point_effectiveness.analysis.effectiveBullets ?? []).map((bullet: any) => ({
-            bulletPoint: bullet.bulletPoint,
-            wordCount: bullet.wordCount,
-            points: 2,
-            status: bullet.status,
-            strengths: bullet.strengths,
-            symbol: bullet.symbol
-          })),
-          ineffectiveBullets: (analysis.bullet_point_effectiveness.analysis.ineffectiveBullets ?? []).map((bullet: any) => ({
-            bulletPoint: bullet.bulletPoint,
-            wordCount: bullet.wordCount,
-            points: -0.5,
-            status: bullet.status,
-            issues: bullet.issues,
-            suggestedRevision: bullet.suggestedRevision,
-            symbol: bullet.symbol
-          })),
-          suggestedImprovements: analysis.bullet_point_effectiveness.analysis.suggestedImprovements
+          effectiveBullets: toArray(bulletSource?.analysis?.effectiveBullets),
+          ineffectiveBullets: toArray(bulletSource?.analysis?.ineffectiveBullets),
+          suggestedImprovements: toString(bulletSource?.analysis?.suggestedImprovements, '')
         }
       }
     },
-    overall_score: analysis.overall_score
+    overall_score: analysis?.overall_score ?? analysis?.jobFitScore?.score
   };
 };
 
@@ -547,14 +405,17 @@ const StartSection: React.FC<StartSectionProps> = ({
 
       let response;
       try {
+        const requestHeaders: Record<string, string> = {};
+        if (API_KEY) {
+          requestHeaders['X-API-Key'] = API_KEY;
+        }
+
         response = await fetch(`${API_BASE_URL}/api/analyze`, {
           method: 'POST',
           body: formData,
           mode: 'cors',
           credentials: 'omit',
-          headers: {
-            // Don't set Content-Type header when using FormData - browser will set it automatically with boundary
-          },
+          headers: requestHeaders,
         });
       } catch (fetchError) {
         console.error('Network/CORS Error:', fetchError);

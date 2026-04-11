@@ -279,6 +279,16 @@ async def analyze_resume_structure_v4(resume_data: Dict[str, Any]) -> Dict[str, 
             'Work Experience',
             'Education'
         ]
+
+        nice_to_have_sections = [
+            'Professional Summary',
+            'Skills and Interests',
+            'Certifications',
+            'Projects',
+            'Awards/Achievements',
+            'Volunteering',
+            'Publications'
+        ]
         
         present_sections = []
         missing_sections = []
@@ -298,6 +308,8 @@ async def analyze_resume_structure_v4(resume_data: Dict[str, Any]) -> Dict[str, 
         
         final_score = max(0, base_score - ats_penalties)
         
+        completed_nice_to_have = 0
+
         # Create section status
         section_status = []
         for section in required_sections:
@@ -305,8 +317,21 @@ async def analyze_resume_structure_v4(resume_data: Dict[str, Any]) -> Dict[str, 
             symbol = "✅" if section in present_sections else "❌"
             section_status.append({
                 "section": section,
+                "type": "must-have",
                 "status": status,
                 "symbol": symbol
+            })
+
+        for section in nice_to_have_sections:
+            is_present = section in resume_data and bool(resume_data[section])
+            if is_present:
+                completed_nice_to_have += 1
+
+            section_status.append({
+                "section": section,
+                "type": "nice-to-have",
+                "status": "Completed" if is_present else "Missing",
+                "symbol": "💡" if is_present else "⚪"
             })
         
         # Determine rating
@@ -329,6 +354,11 @@ async def analyze_resume_structure_v4(resume_data: Dict[str, Any]) -> Dict[str, 
                 "maxPoints": 30,
                 "completedSections": len(present_sections),
                 "totalRequiredSections": len(required_sections),
+                "completedMustHave": len(present_sections),
+                "totalMustHave": len(required_sections),
+                "completedNiceToHave": completed_nice_to_have,
+                "totalNiceToHave": len(nice_to_have_sections),
+                "bonusPoints": 0,
                 "rating": rating,
                 "ratingSymbol": symbol
             },
@@ -348,6 +378,11 @@ async def analyze_resume_structure_v4(resume_data: Dict[str, Any]) -> Dict[str, 
                 "maxPoints": 30,
                 "completedSections": 0,
                 "totalRequiredSections": 4,
+                "completedMustHave": 0,
+                "totalMustHave": 4,
+                "completedNiceToHave": 0,
+                "totalNiceToHave": 7,
+                "bonusPoints": 0,
                 "rating": "Poor",
                 "ratingSymbol": "❌"
             },

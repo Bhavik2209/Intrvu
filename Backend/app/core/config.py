@@ -19,6 +19,9 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://localhost:5173",
         env="ALLOWED_ORIGINS"
     )
+
+    # Chrome Extension Settings
+    chrome_extension_ids: str = Field(default="", env="CHROME_EXTENSION_IDS")
     
     # Server Settings
     port: int = Field(default=8000, env="PORT")
@@ -67,9 +70,18 @@ class Settings(BaseSettings):
     
     def get_allowed_origins_list(self) -> List[str]:
         """Get allowed origins as a list."""
+        origins: List[str] = []
+
         if isinstance(self.allowed_origins, str):
-            return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
-        return self.allowed_origins
+            origins.extend([origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()])
+        else:
+            origins.extend(self.allowed_origins)
+
+        extension_ids = [ext_id.strip() for ext_id in self.chrome_extension_ids.split(",") if ext_id.strip()]
+        origins.extend([f"chrome-extension://{ext_id}" for ext_id in extension_ids])
+
+        # Preserve order while removing duplicates
+        return list(dict.fromkeys(origins))
     
     
     @validator("llm_provider")

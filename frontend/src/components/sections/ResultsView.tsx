@@ -1,6 +1,7 @@
 import React from 'react';
 import { TrendingUp, CheckCircle2, Info, User, ChevronRight } from 'lucide-react';
 import { AnalysisData } from '../../types/AnalysisData';
+import { getScoreSymbol, getScoreTone, getToneClasses } from '../../utils/scoreDisplay';
 
 interface ResultsSectionProps {
   analysisData: AnalysisData | null;
@@ -25,12 +26,22 @@ const ResultsView: React.FC<ResultsSectionProps> = ({
   }
 
   const jobFitScore = analysisData.job_fit_score || { percentage: 0, label: 'Unknown', score: 0 };
+  const resumeQualityScore = analysisData.resume_quality_score || { percentage: 0, label: 'Unknown', score: 0 };
+  const safeJobFitPct = Math.max(0, Math.min(100, Number(jobFitScore.percentage || 0)));
+  const safeQualityPct = Math.max(0, Math.min(100, Number(resumeQualityScore.percentage || 0)));
+  const safeJobFitLabel = jobFitScore.label || 'Unknown';
+  const safeQualityLabel = resumeQualityScore.label || 'Unknown';
+  const jobFitToneClasses = getToneClasses(getScoreTone(safeJobFitLabel));
+  const qualityToneClasses = getToneClasses(getScoreTone(safeQualityLabel));
 
   // Suggested improvement tip from analysis data or fallback
   const improvementTip = analysisData.detailed_analysis?.keyword_match?.analysis?.suggestedImprovements ||
     "Your extensive experience in customer experience strategy and stakeholder facilitation aligns well with the Senior Director role...";
 
-  const qualityTip = "Consider adding more industry-specific keywords to improve your match score.";
+  const qualityTip =
+    analysisData.detailed_analysis?.resume_structure?.analysis?.suggestedImprovements ||
+    analysisData.detailed_analysis?.measurable_results?.analysis?.suggestedImprovements ||
+    "Add clearer impact metrics and make section formatting ATS-friendly.";
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col min-h-full">
@@ -54,9 +65,9 @@ const ResultsView: React.FC<ResultsSectionProps> = ({
               </div>
               <h2 className="text-lg font-bold text-[#1e293b]">Job Fit Score</h2>
             </div>
-            <div className="flex items-center gap-1.5 bg-[#f0fdf4] text-[#166534] px-3 py-1 rounded-full border border-[#dcfce7]">
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${jobFitToneClasses.bg} ${jobFitToneClasses.text} ${jobFitToneClasses.border}`}>
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span className="text-xs font-bold">Good Match</span>
+              <span className="text-xs font-bold">{getScoreSymbol(safeJobFitLabel)} {safeJobFitLabel}</span>
             </div>
           </div>
 
@@ -65,7 +76,7 @@ const ResultsView: React.FC<ResultsSectionProps> = ({
             <div className="relative h-3 w-full bg-[#f1f5f9] rounded-full overflow-hidden mb-2">
               <div
                 className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#6366f1] to-[#4f46e5] rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${jobFitScore.percentage}%` }}
+                style={{ width: `${safeJobFitPct}%` }}
               />
             </div>
             <div className="relative flex justify-between">
@@ -77,9 +88,9 @@ const ResultsView: React.FC<ResultsSectionProps> = ({
               {/* Actual Percentage Float */}
               <div
                 className="absolute -top-1 font-black text-[#1e293b] text-xs"
-                style={{ left: `calc(${jobFitScore.percentage}% - 12px)` }}
+                style={{ left: `calc(${safeJobFitPct}% - 12px)` }}
               >
-                {jobFitScore.percentage}%
+                {safeJobFitPct}%
               </div>
             </div>
           </div>
@@ -105,9 +116,21 @@ const ResultsView: React.FC<ResultsSectionProps> = ({
               </div>
               <h2 className="text-lg font-bold text-[#1e293b]">Resume Quality</h2>
             </div>
-            <div className="bg-[#f0fdf4] text-[#166534] px-3 py-1 rounded-full border border-[#dcfce7] flex items-center gap-1.5">
+            <div className={`px-3 py-1 rounded-full border flex items-center gap-1.5 ${qualityToneClasses.bg} ${qualityToneClasses.text} ${qualityToneClasses.border}`}>
               <CheckCircle2 className="w-3 h-3" />
-              <span className="text-[10px] font-bold">Ready to Impress</span>
+              <span className="text-[10px] font-bold">{getScoreSymbol(safeQualityLabel)} {safeQualityLabel}</span>
+            </div>
+          </div>
+
+          <div className="mb-6 px-1">
+            <div className="relative h-3 w-full bg-[#f1f5f9] rounded-full overflow-hidden mb-2">
+              <div
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#22c55e] to-[#16a34a] rounded-full transition-all duration-1000 ease-out"
+                style={{ width: `${safeQualityPct}%` }}
+              />
+            </div>
+            <div className="text-right text-xs font-black text-[#1e293b]">
+              {safeQualityPct}% ({resumeQualityScore.label || 'Unknown'})
             </div>
           </div>
 

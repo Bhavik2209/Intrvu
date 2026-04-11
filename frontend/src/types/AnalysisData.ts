@@ -66,6 +66,7 @@ export interface AnalysisData {
                 completedMustHave: number;
                 totalMustHave: number;
                 completedNiceToHave: number;
+                totalNiceToHave?: number;
                 bonusPoints: number;
                 rating: string;
                 ratingSymbol: string;
